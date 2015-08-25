@@ -1,0 +1,8 @@
+/node_modules
+npm-debug.log
+.DS_Store
+/*.env
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+/lib/service.js
+/config/config.json

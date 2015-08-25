@@ -1,0 +1,50 @@
+{
+  "name": "Server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "apidoc": {
+    "name": "NoSolo server-side",
+    "version": "0.1.0",
+    "description": "apiDoc basic",
+    "title": "NoSolo back-end docs"
+  },
+  "engines": {
+    "node": "0.10.35"
+  },
+  "dependencies": {
+    "agenda": "^0.6.28",
+    "apn": "^1.7.3",
+    "async": "^0.9.0",
+    "aws-sdk": "^2.1.19",
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "^1.12.2",
+    "cookie-parser": "^1.3.4",
+    "crypto": "0.0.3",
+    "ejs": "^2.3.1",
+    "ejs-locals": "^1.0.2",
+    "express": "^3.20.2",
+    "fs": "0.0.2",
+    "mongodb": "^2.0.24",
+    "mongodb-uri": "^0.9.7",
+    "mongoose": "^4.1.1",
+    "mongoose-autoinc": "0.0.2",
+    "multer": "^0.1.8",
+    "nconf": "^0.7.1",
+    "node-gcm": "^0.9.15",
+    "passport": "^0.2.1",
+    "passport-facebook": "^2.0.0",
+    "redis": "^0.12.1",
+    "sendgrid": "^1.8.0",
+    "socket.io": "^1.3.5",
+    "socket.io-redis": "^0.1.4",
+    "underscore": "^1.8.3",
+    "winston": "^0.9.0"
+  }
+}
