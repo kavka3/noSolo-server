@@ -18,9 +18,9 @@ var log = require('../lib/log.js')(module),
 
 function getIds(users){
     var udids = [];
-    if(users != null){
+    if(!common.isEmpty(users)){
         for(var i = 0; i < users.length; i++){
-            if(users[i].uniqueDeviceId){
+            if(users[i]['settings']['isNtfApproved'] && users[i].uniqueDeviceId){
                 for(var j = 0; j < users[i].uniqueDeviceId.length; j++ ){
                     udids.push(users[i].uniqueDeviceId[j]);
                 }
@@ -33,7 +33,7 @@ function getIds(users){
 function getIdsToOne(user){
     var udid = [];
     if(user != null){
-        if(users[i].uniqueDeviceId){
+        if(user['settings']['isNtfApproved']){
             for(var j = 0; j < user.uniqueDeviceId.length; j++ ){
                 udid.push(user.uniqueDeviceId[j]);
             }

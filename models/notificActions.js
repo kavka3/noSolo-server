@@ -139,6 +139,16 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
 
                         }
                     });
+            },
+            function(resAct, resUser, callback){
+                if(resUser.settings.isSendReminder && resUser.settings.multipleReminders &&
+                    resUser.settings.multipleReminders.length > 0){
+                    common.setMultipleReminder(resUser, resAct, callback);
+                }
+                else if(resUser.settings.isSendReminder && resUser.settings.reminderTime > 0){
+                    common.setReminder(resUser, resAct, callback);
+                }
+                else{ callback(null); }
             }
         ],
         function(err){

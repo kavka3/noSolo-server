@@ -69,8 +69,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         messageForOthers = creatorSurname + MULTI_PARAMS_MSG_OTHERS,
         notification = null,
         ntfAddressee = getAddressee(activity);
-
-        ;
+    ;
 
     switch(changedFields[0]){
         case 'timeStart':case 'timeFinish': {
@@ -80,7 +79,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
             notification = 'activity time changed';
         }
         else{ notification = NTF_MULTI_MSG; }
-        };break;
+    };break;
         case 'location': {
             if(changedFields.length == 1){
                 message = CHANGED_LOCATION;
@@ -156,8 +155,8 @@ module.exports = ActivityOperations = {
             .find({ '_id': { $in: actIds } })
             .populate('joinedUsers',
             '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
-            .populate('creator', '_id surname familyName imageUrl');
-            //.limit(100);
+            .populate('creator', '_id surname familyName imageUrl')
+            .limit(100);
         query.exec(function(err, resActivity){
             if (err){
                 log.error(err);
@@ -280,7 +279,7 @@ module.exports = ActivityOperations = {
             .where('_id').nin(requestObj.notFindArray)
             .where('isPrivate').ne(true)
             //.where('joinedUsers').size(4)
-            .populate('joinedUsers', '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
+            .populate('joinedUsers', '_id surname familyName imageUrl birthDate gender about activityCreatedNumber')
             .populate('creator', '_id surname familyName imageUrl')
             //.populate('tags', '_title tagDictionary imageUrl')
             .limit(100);
@@ -312,46 +311,46 @@ module.exports = ActivityOperations = {
     //remove user from activity and chat change user fields
     removeUserFromActivity: function(activityId, userId, callbackDone){
         async.waterfall([
-            function(callback){
-                Activity.findByIdAndUpdate(activityId,
-                    { $pull: { joinedUsers: userId, activitiesLiked: { activityId: activityId } } }, { new: true },
-                function(err, activity){
-                    if(err){ callback(err); }
-                    else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
-                    else{ callback(null, activity); }
-                })
-            },
-            function(activity, callback){
-                Chat.findByIdAndUpdate(activityId, {$pull: { joinedUsers: userId }},
-                function(err, chat){
-                    if(err){ callback(err); }
-                    else{ callback(null, activity) }
-                })
-            },
-            function(activity, callback){
-                User.findByIdAndUpdate(userId, {$pull:{ activitiesJoined: activityId } },
-                    {new: true}, function(err, changedUser){
-                        if (err){
-                            log.error(err);
-                            callback(err);
-                        }
-                        else{
-                            Socket.removeFromChat(userId, activityId);
-                            Notify.leaveActivity(activity, changedUser);
-                            callback(null, activity);
-                        }
-                    });
-            }
-        ],
-        function(err, activity){
-            if(err){
-                log.error(err);
-                callbackDone(err);
-            }
-            else{
-                callbackDone(null, activity);
-            }
-        })
+                function(callback){
+                    Activity.findByIdAndUpdate(activityId,
+                        { $pull: { joinedUsers: userId, activitiesLiked: { activityId: activityId } } }, { new: true },
+                        function(err, activity){
+                            if(err){ callback(err); }
+                            else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
+                            else{ callback(null, activity); }
+                        })
+                },
+                function(activity, callback){
+                    Chat.findByIdAndUpdate(activityId, {$pull: { joinedUsers: userId }},
+                        function(err, chat){
+                            if(err){ callback(err); }
+                            else{ callback(null, activity) }
+                        })
+                },
+                function(activity, callback){
+                    User.findByIdAndUpdate(userId, {$pull:{ activitiesJoined: activityId } },
+                        {new: true}, function(err, changedUser){
+                            if (err){
+                                log.error(err);
+                                callback(err);
+                            }
+                            else{
+                                Socket.removeFromChat(userId, activityId);
+                                Notify.leaveActivity(activity, changedUser);
+                                callback(null, activity);
+                            }
+                        });
+                }
+            ],
+            function(err, activity){
+                if(err){
+                    log.error(err);
+                    callbackDone(err);
+                }
+                else{
+                    callbackDone(null, activity);
+                }
+            })
     },
 
     //delete in cascade style: with activity userFields, chat and tags;
@@ -532,7 +531,7 @@ module.exports = ActivityOperations = {
         function tryToSave(createdActivity, activityChat, callback){
             var start = Date.now();
             log.info('TRYING TO SAVE ACTIVITY: ');
-            console.log(createdActivity);
+            //console.log(createdActivity);
             User.findByIdAndUpdate(createdActivity.creator,
                 { $push:{ activitiesCreated: createdActivity._id, activitiesJoined: createdActivity._id}, $inc:{ activityCreatedNumber: 1 } },
                 { new: true, upsert: true }, function(err, user){
@@ -578,6 +577,17 @@ module.exports = ActivityOperations = {
                 function(createdActivity, activityChat, user, callback){
                     Socket.addToChat(createdActivity.creator, activityChat._id);
                     callback(null, createdActivity, user);
+                },
+                function(createdActivity, user, callback){
+                    if(user.settings.isSendReminder && user.settings.multipleReminders &&
+                        user.settings.multipleReminders.length > 0){
+                        common.setMultipleReminder(user, createdActivity, callback);
+                    }
+                    else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
+                        common.setReminder(user, createdActivity, callback);
+                    }
+                    else{ callback(null, createdActivity, user); }
+
                 },
                 function(createdActivity, user, callback){
                     if(common.isEmpty(createdActivity.tags)){

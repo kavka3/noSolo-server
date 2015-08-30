@@ -117,12 +117,15 @@ var userSchema = new Schema({
     },
     settings: {
         type: Schema.Types.Mixed,
-        default: { 'joinApprovals': true,
+        default: {
+            'isNtfApproved': true,
+            'joinApprovals': true,
             'joinRequests': true,
             'newActivities' : true,
             'newMessages': true,
             'isSendReminder': false,
-            'reminderTime': 0
+            'reminderTime': 0,
+            'multipleReminders': []
         }
     },
     uniqueDeviceId: [{
