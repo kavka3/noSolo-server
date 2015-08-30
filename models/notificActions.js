@@ -134,7 +134,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             Socket.notifyToOne(notification);
                             var message = sendUser.surname + ' joined ' + resAct.title;
                             Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
-                            callbackDone(null, resAct);
+                            callbackDone(null, resAct, resUser);
                             callback();
 
                         }
