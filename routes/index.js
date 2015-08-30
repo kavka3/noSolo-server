@@ -1270,6 +1270,7 @@ module.exports = function(app){
             async.waterfall([
                     function(callback){
                         User.universalUserSearch('_id', request.query.userId, function(err, user){
+                            console.log('MY_ACTIVITIES UID', request.query.userId);
                             if(err){ callback(err); }
                             else if(!common.isEmpty(user)){
                                 var activitiesPending = [];

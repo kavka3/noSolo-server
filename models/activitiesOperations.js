@@ -156,8 +156,8 @@ module.exports = ActivityOperations = {
             .find({ '_id': { $in: actIds } })
             .populate('joinedUsers',
             '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
-            .populate('creator', '_id surname familyName imageUrl')
-            .limit(100);
+            .populate('creator', '_id surname familyName imageUrl');
+            //.limit(100);
         query.exec(function(err, resActivity){
             if (err){
                 log.error(err);
@@ -280,7 +280,7 @@ module.exports = ActivityOperations = {
             .where('_id').nin(requestObj.notFindArray)
             .where('isPrivate').ne(true)
             //.where('joinedUsers').size(4)
-            .populate('joinedUsers', '_id surname familyName imageUrl birthDate gender about activityCreatedNumber')
+            .populate('joinedUsers', '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
             .populate('creator', '_id surname familyName imageUrl')
             //.populate('tags', '_title tagDictionary imageUrl')
             .limit(100);
