@@ -134,8 +134,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             Socket.notifyToOne(notification);
                             var message = sendUser.surname + ' joined ' + resAct.title;
                             Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
-                            callbackDone(null, resAct, resUser);
-                            callback();
+                            callback(null, resAct, resUser);
 
                         }
                     });
@@ -151,8 +150,11 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                 else{ callback(null); }
             }
         ],
-        function(err){
+        function(err, resAct){
             if(err){ callbackDone(err) }
+            else{
+                callbackDone(null, resAct);
+            }
         });
 };
 
