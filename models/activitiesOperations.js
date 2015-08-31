@@ -73,6 +73,39 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
 
     switch(changedFields[0]){
         case 'timeStart':case 'timeFinish': {
+        var iterator = function(user, callbackI){
+            if(user.settings.isSendReminder && user.settings.multipleReminders &&
+                user.settings.multipleReminders.length > 0){
+                common.setMultipleReminder(user, activity, callbackI);
+            }
+            else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
+                common.setReminder(user, activity, callbackI);
+            }
+            else{ callbackI(null); }
+        };
+        common.deleteReminder(activity._id, function(err){
+            if(err){log.error(err);}
+            else{
+                async.waterfall([
+                    function(callback){
+                        User.find({ '_id': {$in: activity.joinedUsers } }, function(err, resUsers){
+                           if(err){ callback(err); }
+                            else{ callback(null, resUsers); }
+                        });
+                    },
+                    function(users, callback){
+                        async.eachSeries(users, iterator, function(err, res){
+                            if(err){ callback(err); }
+                            else{ callback(null); }
+                        })
+                    }
+                ],
+                function(err){
+                    if(err){log.error(err); }
+                    else{ log.info('ACTIVITY OPERATIONS ACTIVITY REMINDERS UPDATED'); }
+                })
+            }
+        });
         if(changedFields.length <= 2){
             message = 'You' + CHANGED_TIME;
             messageForOthers = creatorSurname + CHANGED_TIME;
@@ -337,9 +370,13 @@ module.exports = ActivityOperations = {
                             else{
                                 Socket.removeFromChat(userId, activityId);
                                 Notify.leaveActivity(activity, changedUser);
-                                callback(null, activity);
+                                callback(null, activity, changedUser);
                             }
                         });
+                },
+                function(activity, user, callback){
+                    common.removeUserFromTask(activity._id, user._id);
+                    callback(null, activity);
                 }
             ],
             function(err, activity){
@@ -372,6 +409,7 @@ module.exports = ActivityOperations = {
                         callback(err);
                     }
                     Socket.chatClosed(activityId, result.joinedUsers);
+                    common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);
                 });

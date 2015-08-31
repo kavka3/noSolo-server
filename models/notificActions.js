@@ -23,6 +23,7 @@ var log = require('../lib/log.js')(module),
     ACTIVITY_RECUR = 9,
     REJECT_RECUR = 10,
     UPDATE_APP = 11,
+    ACTIVITY_REMINDER = 12,
 //recurStatus:
     JOINED = 1,
     DISCLAIMED = 2,
