@@ -189,7 +189,7 @@ module.exports = ActivityOperations = {
             .populate('joinedUsers',
             '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
             .populate('creator', '_id surname familyName imageUrl')
-            .limit(100);
+            //.limit(100);
         query.exec(function(err, resActivity){
             if (err){
                 log.error(err);
