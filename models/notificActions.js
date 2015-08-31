@@ -44,6 +44,24 @@ function changeRecurStatus(recurUsersObj, userId, status){
     return recurUsers;
 };
 
+function createSpecialData(user, activityId){
+    var resUser = common.deepObjClone(user);
+    delete resUser.activitiesCreated;
+    delete resUser.activitiesDisliked;
+    delete resUser.activitiesLiked;
+    delete resUser.activitiesJoined;
+    delete resUser.settings;
+    delete resUser.noSoloId;
+    delete resUser.notifications;
+    delete resUser.socialToken;
+    delete resUser.uniqueDeviceId;
+    delete resUser.__v;
+
+    resUser['activityId'] = activityId;
+
+    return resUser;
+};
+
 //has been changed: add activityLiked processing, sends notification to group
 function addUserToActivity(activityCreator, activityId, userId, isRecur, callbackDone){
     async.waterfall([
@@ -126,11 +144,12 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                         if (err) { callback(err); }
                         else if (common.isEmpty(resUser)) { callback(new Error('User is not found')); }
                         else {
-                            var sendUser = common.deepObjClone(resUser);
-                            sendUser['activityId'] = activityId;
+                            var specialData = createSpecialData(resUser, activityId);
+                            /*var sendUser = common.deepObjClone(resUser);
+                            sendUser['activityId'] = activityId;*/
                             var notification =
                                 Notification({ creator: resAct.creator, addressee: resAct.creator
-                                    , notificationType: USER_JOINS_ACTIVITY, specialData: sendUser });
+                                    , notificationType: USER_JOINS_ACTIVITY, specialData: specialData });
                             notification.save(function(err){ if(err)log.error(err.message) });
                             Socket.notifyToOne(notification);
                             var message = sendUser.surname + ' joined ' + resAct.title;
@@ -184,12 +203,14 @@ module.exports =  NotificationOperations = {
                         })
                 },
                 function(user, callback){
-                    /*var ntf = common.deepObjClone(user);
-                     ntf['activityId'] = activityId;*/
+                    var specialData = createSpecialData(user, activityId);
+                    specialData['creatorSurname'] = creatorSurname;
+                    specialData['joiningActivityTitle'] = title;
+                    specialData['message'] = message;
                     var newNotify = Notification({ creator: userId , addressee: activityCreator
                         , notificationType: LIKE_ACTIVITY, /*specialData: {  activityId: activityId, user: user*//*, joiningActivityTitle: SHOULD_FIND*/
-                        specialData: { activityId: activityId, userId: user._id, imageUrl: user.imageUrl,
-                            surname: user.surname, message: message, creatorSurname: creatorSurname, joiningActivityTitle: title } });
+                        specialData: specialData }); /*{ activityId: activityId, userId: user._id, imageUrl: user.imageUrl,
+                        surname: user.surname, message: message, creatorSurname: creatorSurname, joiningActivityTitle: title } }*/
                     newNotify.save(function(err){
                         if(err){callback(err);}
                         else{callback(null, newNotify);}
@@ -371,9 +392,10 @@ module.exports =  NotificationOperations = {
     },
 
     leaveActivity: function(activity, user){
+        var specialData = createSpecialData(user, activity._id);
+        specialData['joiningActivityTitle'] = activity.title;
         var notification = Notification({ creator: activity.creator , addressee: activity.creator
-            , notificationType: USER_LEAVE_ACTIVITY,
-            specialData: { activityId: activity._id,  surname: user.surname, userId: user._id, imageUrl: user.imageUrl, joiningActivityTitle: activity.title } });
+            , notificationType: USER_LEAVE_ACTIVITY, specialData: specialData });
         notification.save(function(err){ if(err)log.error(err.message) });
         Socket.notifyToOne(notification);
         var message = user.surname + ' left ' + activity.title;
