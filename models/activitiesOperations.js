@@ -285,7 +285,7 @@ module.exports = ActivityOperations = {
         var activityObj = common.deepObjClone(activity);
         delete activityObj._id;
         if(activityObj.creator){ activityObj.creator = activity.creator._id; }
-        Activity.findByIdAndUpdate(activity._id, activityObj, function(err, resAct){
+        Activity.findByIdAndUpdate(activity._id, activityObj, {upsert: true, new: true}, function(err, resAct){
             if (err) {
                 log.error(err);
                 callback(err);
