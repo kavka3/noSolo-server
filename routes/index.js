@@ -1338,7 +1338,35 @@ module.exports = function(app){
             });
         }
         else{ response.json({result: 'error', data: 'User not found' }); }
-    })
+    });
+
+    app.get('/connection', function(request, response){
+        var productionServer1 = 'https://salty-peak-2515.herokuapp.com/',
+            productionServer2 = 'https://floating-depths-2240.herokuapp.com/',
+            developmentServer = 'https://nosolodev.herokuapp.com/',
+            localHost = 'http://localhost:5000/',
+            redirectProduction = 'https://tranquil-shore-8222.herokuapp.com/',
+            redirectDev = 'https://redirect-dev.herokuapp.com/',
+            redirectLocal = 'http://localhost:11000/'
+        ;
+        if(request.query.appStatus == 'development'){
+            if(request.query.isLocal == 'true'){
+                response.json({ serverURL: localHost, redirectURL: redirectLocal });
+            }
+            else{
+                response.json({ serverURL: developmentServer, redirectURL: redirectDev });
+            }
+
+        }
+        else{
+            if(request.query.version >= 5.8){
+                response.json({ serverURL: productionServer1, redirectURL: redirectProduction });
+            }
+            else{
+                response.json({ serverURL: productionServer2, redirectURL: redirectProduction });
+            }
+        }
+    });
 
 
 

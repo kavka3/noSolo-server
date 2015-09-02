@@ -58,6 +58,7 @@ function createSpecialData(user, activityId){
     delete resUser.__v;
 
     resUser['activityId'] = activityId;
+    resUser['userId'] = user._id;
 
     return resUser;
 };
