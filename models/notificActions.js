@@ -153,7 +153,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                     , notificationType: USER_JOINS_ACTIVITY, specialData: specialData });
                             notification.save(function(err){ if(err)log.error(err.message) });
                             Socket.notifyToOne(notification);
-                            var message = sendUser.surname + ' joined ' + resAct.title;
+                            var message = resUser.surname + ' joined ' + resAct.title;
                             Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
                             callback(null, resAct, resUser);
 
