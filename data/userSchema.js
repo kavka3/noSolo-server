@@ -123,8 +123,8 @@ var userSchema = new Schema({
             'joinRequests': true,
             'newActivities' : true,
             'newMessages': true,
-            'isSendReminder': false,
-            'reminderTime': 0,
+            'isSendReminder': true,
+            'reminderTime': 1,
             'multipleReminders': []
         }
     },
