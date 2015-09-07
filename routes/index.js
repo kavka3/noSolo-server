@@ -460,7 +460,7 @@ module.exports = function(app){
         console.log(request.body);
         var resJson = {};
         var activityObj = checkActivityFields(request.body);
-        if(!activityObj.result == 'error'){
+        if(activityObj.result != 'error'){
             Activity.createActivity(activityObj, function(err, result){
                 if(err){
                     resJson.result = 'error';
