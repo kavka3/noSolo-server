@@ -309,7 +309,7 @@ module.exports = ActivityOperations = {
         var query = Activity
             .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
             .where('timeFinish').gt(Date.now())
-            .where('created').lt(startSearch)
+            .where('created').gt(startSearch)
             .where('_id').nin(requestObj.notFindArray)
             .where('isPrivate').ne(true)
             //.where('joinedUsers').size(4)
@@ -718,6 +718,20 @@ module.exports = ActivityOperations = {
                 if(resAct.joinedUsers.length >= resAct.maxMembers){ callback(null, false); }
                 else{ callback(null, true, resAct.title); }
             }
+        })
+    },
+
+    getCurrent: function(callback){
+        var query = Activity
+            .find({})
+            .where('timeFinish').gt(Date.now())
+            .populate('joinedUsers',
+            '_id surname familyName imageUrl currentLocation')
+            .populate('creator', '_id surname familyName imageUrl currentLocation')
+
+        query.exec(function(err, resActivities){
+            if(err){ callback(err); }
+            else{ callback(null, resActivities); }
         })
     }
 

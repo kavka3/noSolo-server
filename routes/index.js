@@ -50,63 +50,6 @@ function getCreator(users, creatorId){
     return users[index];
 };
 
-/*function addUsersToActivity(response, foundedActivities, resJson){
- //field for results
- resJson.data = [];
- //loop for activities
- var iteratorI = function(activity, callbackDoneI){
- var activityUsers = JSON.parse(JSON.stringify(activity));
- activityUsers['joinedUsersDetails'] = [];
- User.getUsersByList(activity.joinedUsers, function(err, resUsers){
- if(err){
- callbackDoneI(err);
- }
- else{
- if(resUsers.length != 0){
- var usersDetails = getDetails(resUsers, activity.creator);
- var creator = getCreator(resUsers, activity.creator);
-
- activityUsers['joinedUsersDetails'] = usersDetails;
- activityUsers['creatorName'] = creator.surname;
- activityUsers['creatorUrl'] = creator.imageUrl;
- activityUsers['about'] = creator.about;
-
- resJson.data.push(activityUsers);
- callbackDoneI();
- }
- else{
- log.info('there are no users in activity: ' + activity._id);
- callbackDoneI();
- }
- }
- })
- };
- //here functions of else case are starting
- async.series([
- function(callback) {
- //loop for activities runs here
- async.eachSeries(foundedActivities, iteratorI, function(err){
- if (err){
- log.error(err.message);
- callback(err);
- }
- callback(null);
- });
- },
- function(callback) {
- resJson.result = 'success';
- response.json(resJson);
- callback(null);
- }
- ],
- function(err,results){
- if(err){
- log.error(err.message);
- resJson.result = 'error';
- resJson.errMessage = err.message;
- }
- });
- };*/
 
 function getNotForFind(foundedUser){
     var userDislikes = foundedUser.activitiesDisliked;
@@ -196,40 +139,28 @@ function compareAct(oldAct, newAct){
     return changedFields;
 };
 
-/*function checkActivityFields(obj, callbackDone){
- if(common.isEmpty(obj.title) || common.isEmpty(obj.creator) || common.isEmpty(obj.location)
- || common.isEmpty(obj.timeFinish) || common.isEmpty(obj.timeStart)){
- callbackDone(new Error('not enough fields'));
- }
- else{
- var resObj = common.deepObjClone(obj);
- resObj.creator = obj.creator._id;
- if(!common.isEmpty(obj.tags)){
- var arr = [];
- for(var i = 0; i < obj.tags.length; i++){
- arr.push(obj.tags[i]._title)
- }
- resObj.tagsByLanguage = obj.tags;
- resObj.tags = arr;
- }
- Activity.findActivity(obj._id, function(err, oldAct){
- if(err){
- log.error(err);
- callbackDone(err);
- }
- else{
- resObj['changedField'] = compareAct(oldAct, obj);
- callbackDone(null, resObj);
- }
- });
- }
- };*/
+function checkIfEmpty(obj){
+    var result = {
+        result: 'error',
+        absent: null
+    };
+    if(common.isEmpty(obj.title)){  result.absent = 'no title'; }
+    else if(common.isEmpty(obj.creator)) {  result.absent = 'no creator'; }
+    else if(common.isEmpty(obj.location)) {  result.absent = 'no location'; }
+    else if(common.isEmpty(obj.timeFinish)) {  result.absent = 'no time finsih'; }
+    else if(common.isEmpty(obj.timeStart)) {  result.absent = 'no time start'; }
+    else{ result.result = 'success'; }
+
+    return result;
+};
 
 function checkActivityFields(obj){
-    if(common.isEmpty(obj.title) || common.isEmpty(obj.creator) || common.isEmpty(obj.location)
+    /*if(common.isEmpty(obj.title) || common.isEmpty(obj.creator) || common.isEmpty(obj.location)
         || common.isEmpty(obj.timeFinish) || common.isEmpty(obj.timeStart)){
         return null;
-    }
+    }*/
+    var checkFiegs = checkIfEmpty(obj);
+    if(checkFiegs.result == 'error'){ return checkFiegs; }
     else{
         var resObj = common.deepObjClone(obj);
         resObj.creator = obj.creator._id;
@@ -325,20 +256,6 @@ function checkDeviceIdFields(deviceIdObj){
     else{ return false; }
 };
 
-/*function changeUserRadius(){
- User.getAllUsers(function(err, users){
- if(err){ console.log('ups')}
- else{
- for(var i = 0; i < users.length;i++){
- users[i].radius = 200;
- users[i].save(function(err){
- if(err){ console.log(err); }
- else{ console.log('done') }
- })
- }
- }
- });
- };*/
 
 module.exports = function(app){
 
@@ -541,7 +458,7 @@ module.exports = function(app){
         console.log(request.body);
         var resJson = {};
         var activityObj = checkActivityFields(request.body);
-        if(activityObj){
+        if(!activityObj.result == 'error'){
             Activity.createActivity(activityObj, function(err, result){
                 if(err){
                     resJson.result = 'error';
@@ -557,7 +474,7 @@ module.exports = function(app){
         }
         else{
             resJson.result = 'error';
-            resJson.data = NOT_ENOUGH_FIELDS;
+            resJson.data = activityObj.absent;
             response.json(resJson);
         }
     });
@@ -1366,6 +1283,18 @@ module.exports = function(app){
                 response.json({ serverURL: productionServer2, redirectURL: redirectProduction });
             }
         }
+    });
+
+    app.get('/get_current', function(request, response){
+        Activity.getCurrent(function(err, resActivities){
+           if(err){
+               log.error(err);
+               response.json({result: 'error', data: err.message } );
+           }
+            else{
+               response.json({ result: 'success', data: resActivities });
+           }
+        });
     });
 
 
