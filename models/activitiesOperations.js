@@ -309,7 +309,7 @@ module.exports = ActivityOperations = {
         var query = Activity
             .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
             .where('timeFinish').gt(Date.now())
-            .where('created').gt(startSearch)
+            //.where('created').lt(startSearch)
             .where('_id').nin(requestObj.notFindArray)
             .where('isPrivate').ne(true)
             //.where('joinedUsers').size(4)
