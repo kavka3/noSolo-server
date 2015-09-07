@@ -194,10 +194,12 @@ function checkActivityFields(obj){
 };
 
 function checkActivityFieldsUpd(obj, callbackDone){
-    if(common.isEmpty(obj.title) || common.isEmpty(obj.creator) || common.isEmpty(obj.location)
+   /* if(common.isEmpty(obj.title) || common.isEmpty(obj.creator) || common.isEmpty(obj.location)
         || common.isEmpty(obj.timeFinish) || common.isEmpty(obj.timeStart)){
         callbackDone(new Error('not enough fields'));
-    }
+    }*/
+    var checkFiegs = checkIfEmpty(obj);
+    if(checkFiegs.result == 'error'){ callbackDone(new Error(checkFiegs.absent)); }
     else{
         //console.log('IN UPDATE: ', obj);
         var resObj = common.deepObjClone(obj);
