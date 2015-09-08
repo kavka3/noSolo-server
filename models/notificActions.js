@@ -146,6 +146,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                         else if (common.isEmpty(resUser)) { callback(new Error('User is not found')); }
                         else {
                             var specialData = createSpecialData(resUser, activityId);
+                            specialData['joiningActivityTitle'] = resAct.title;
                             /*var sendUser = common.deepObjClone(resUser);
                             sendUser['activityId'] = activityId;*/
                             var notification =
