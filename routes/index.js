@@ -159,8 +159,8 @@ function checkActivityFields(obj){
         || common.isEmpty(obj.timeFinish) || common.isEmpty(obj.timeStart)){
         return null;
     }*/
-    var checkFiegs = checkIfEmpty(obj);
-    if(checkFiegs.result == 'error'){ return checkFiegs; }
+    var checkFields = checkIfEmpty(obj);
+    if(checkFields.result == 'error'){ return checkFields; }
     else{
         var resObj = common.deepObjClone(obj);
         resObj.creator = obj.creator._id;
@@ -179,12 +179,14 @@ function checkActivityFields(obj){
             if(!common.isEmpty(arr)){ resObj.tags = arr; }
             var tagsByLang = [];
             for(var i = 0; i < obj.tags.length; i++){
-                var tagObj = {};
-                tagObj['name'] = obj.tags[i]['name'];
-                tagObj['imageUrl'] = obj.tags[i]['imageUrl'];
-                tagObj['tagCategory'] = obj.tags[i]['tagCategory'];
-                tagObj['_title'] = obj.tags[i]['_title'];
-                tagsByLang.push(tagObj);
+                if(obj.tags[i]['name']){
+                    var tagObj = {};
+                    tagObj['name'] = obj.tags[i]['name'];
+                    tagObj['imageUrl'] = obj.tags[i]['imageUrl'];
+                    tagObj['tagCategory'] = obj.tags[i]['tagCategory'];
+                    tagObj['_title'] = obj.tags[i]['_title']? obj.tags[i]['_title'] : obj.tags[i]['name'];
+                    tagsByLang.push(tagObj);
+                }
             }
             resObj.tagsByLanguage = tagsByLang;
 
@@ -1259,6 +1261,7 @@ module.exports = function(app){
         else{ response.json({result: 'error', data: 'User not found' }); }
     });
 
+    //dynamyc url for app
     app.get('/connection', function(request, response){
         var productionServer1 = 'https://salty-peak-2515.herokuapp.com/',
             productionServer2 = 'https://floating-depths-2240.herokuapp.com/',
@@ -1287,6 +1290,7 @@ module.exports = function(app){
         }
     });
 
+    //current activities for admin app
     app.get('/get_current', function(request, response){
         Activity.getCurrent(function(err, resActivities){
            if(err){
@@ -1298,6 +1302,38 @@ module.exports = function(app){
            }
         });
     });
+
+    //returns reported activities
+    app.get('/get_reports', function(request, response){
+       report.getReports(function(err, resReports){
+           if(err){
+               log.error(err);
+               response.json({result: 'error', data: err.message });
+           }
+           else{
+               console.log('Got all reports:', resReports);
+               response.json({result: 'success', data: resReports });
+           }
+       })
+    });
+
+    app.post('/proceed_report', function(request, response){
+        report.proceedReport(request.body.activityId, function(err){
+            if(err){ response.json({result: 'error', data: err.message }); }
+            else{ response.json({result: 'success', data: null });
+            }
+        })
+    });
+    app.post('/reject_report', function(request, response){
+        report.rejectReport(request.body.activityId, function(err){
+            if(err){
+                log.error(err);
+                response.json({result: 'error', data: err.message });
+            }
+            else{ response.json({result: 'success', data: null }); }
+        })
+    })
+
 
 
 
