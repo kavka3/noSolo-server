@@ -164,16 +164,16 @@ function checkActivityFields(obj){
     else{
         var resObj = common.deepObjClone(obj);
         resObj.creator = obj.creator._id;
-        if(resObj.tags && resObj.tags.length == 0){
+        //if(resObj.tags && resObj.tags.length == 0){
             console.log('DELETE TAGS');
             delete resObj.tags;
             delete resObj.tagsByLanguage;
-        }
-        else if(!common.isEmpty(resObj.tags)){
+        //}
+        //else if(!common.isEmpty(resObj.tags)){
             var arr = [];
             for(var i = 0; i < obj.tags.length; i++){
-                if(obj.tags[i]._title != undefined){
-                    arr.push(obj.tags[i]._title);
+                if(obj.tags[i]['_title'] != undefined){
+                    arr.push(obj.tags[i]['_title']);
                 }
             }
             if(!common.isEmpty(arr)){ resObj.tags = arr; }
@@ -187,10 +187,14 @@ function checkActivityFields(obj){
                     tagObj['_title'] = obj.tags[i]['_title']? obj.tags[i]['_title'] : obj.tags[i]['name'];
                     tagsByLang.push(tagObj);
                 }
+                if(!obj.tags[i]['_title']){
+                    obj.tags[i]['_title']
+                }
             }
-            resObj.tagsByLanguage = tagsByLang;
+            resObj['tagsByLanguage'] = tagsByLang;
+            resObj['tags'] = arr;
 
-        }
+        //}
         return resObj;
     }
 };
