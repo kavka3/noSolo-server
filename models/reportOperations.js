@@ -6,7 +6,8 @@ var log = require('../lib/log.js')(module),
     async = require('async'),
     common = require('../lib/commonFunctions.js'),
     mail = require('../lib/email.js'),
-    Report = require('./../data/reportSchema.js')
+    Report = require('./../data/reportSchema.js'),
+    Activity = require('./activitiesOperations')
     ;
 
 module.exports = {
@@ -52,6 +53,62 @@ module.exports = {
                 callbackDone(null);
             }
         });
+    },
+
+    getReports: function(callbackDone){
+        var query = Report
+            .find({ isFinished: false })
+            .populate('activityId',
+                '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish')
+        ;
+        query.exec(function(err, resReports){
+            if (err) {
+                callbackDone(err);
+            }
+            else {
+                callbackDone(null, resReports);
+            }
+        })
+        /*Report.find({isFinished: false}, function(err, resReports){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resReports); }
+        })*/
+    },
+
+    proceedReport: function(activityId, callbackDone){
+        async.series([
+            function(callback){
+                Activity.deleteActivity(activityId, function(err){
+                    if(err){ callback(err); }
+                    else{ callback(null); }
+                })
+            },
+            function(callback){
+                Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
+                    if(err){ callback(err); }
+                    else{ callback(null); }
+                })
+            }
+        ],
+            function (err){
+                if(err){
+                    log.error(err);
+                    callbackDone(err); }
+                else{
+                    log.info('Report finished: success');
+                    callbackDone(null);
+                }
+            })
+
+    },
+    rejectReport: function(activityId, callbackDone){
+        Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
+            if(err){ callbackDone(err); }
+            else{
+                console.log('Report finished:', resReports);
+                callbackDone(null, resReports);
+            }
+        })
     }
 
 };

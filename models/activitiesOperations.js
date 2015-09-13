@@ -417,7 +417,7 @@ module.exports = ActivityOperations = {
             }
         });
     },
-    //create new activity from old one, change chat id, send request to user join to new activity
+    //creates new activity from old one, change chat id, send request to user join to new activity
     recurActivity: function(activityId, newTimeStart, newTimeFinish, changedFields, callbackResult){
         async.waterfall([
                 //get parent activity and check if time start in past, clear id, joinedUsers
@@ -600,6 +600,7 @@ module.exports = ActivityOperations = {
                 function(callback){
                     //console.log('IN WATERFALL: ', activity)
                     var createdActivity = new Activity(activity);
+                    console.log('Created activity', createdActivity);
                     var activityChat = new Chat( { _id: createdActivity._id, usersInChat:[activity.creator] });
                     createdActivity.joinedUsers.push(activity.creator);
                     callback(null, createdActivity, activityChat);
