@@ -145,7 +145,7 @@ var ChatManager = {
             var nfc = notForCreator ? notForCreator : { notForCreator : false, activityCreator: null, notForOthers: false, joinedUser: false };
             var message = new Message({ _id: messageId, creator: userId, userName: userName, chatId: chatId,
                 messageText: message, notForCreator: nfc });
-            console.log(message);
+            //console.log(message);
             message.save(function(err){
                 if(err){
                     log.error(err);
