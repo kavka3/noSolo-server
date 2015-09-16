@@ -338,7 +338,7 @@ module.exports = function(app){
                 response.json({result: "error", data: err.message});
             }
             else{
-                request.session.user = result._id;
+                //request.session.user = result._id;
                 response.json({result: "success", data: result});
             }
         });

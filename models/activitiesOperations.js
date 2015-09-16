@@ -71,6 +71,8 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         ntfAddressee = getAddressee(activity);
     ;
 
+    console.log('IN CHANGE FIELDS:', changedFields[0]);
+
     switch(changedFields[0]){
         case 'timeStart':case 'timeFinish': {
         var iterator = function(user, callbackI){
@@ -170,7 +172,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         default: shouldSend = false; break;
 
     }
-
+    console.log('IN CANGE FIELDS SHOULD SEND', shouldSend);
     if(shouldSend){
         if(forEveryBody){ Socket.sendToOthers(messageForOthers, activity._id, activity.creator); }
         Socket.sendToCreator(activity.creator, '100009647204771', 'noSolo', activity._id, message);
@@ -409,7 +411,7 @@ module.exports = ActivityOperations = {
                         log.error(err);
                         callback(err);
                     }
-                    Socket.chatClosed(activityId, result.joinedUsers);
+                    //Socket.chatClosed(activityId, result.joinedUsers);
                     common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);
