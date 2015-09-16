@@ -176,7 +176,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
     if(shouldSend){
         if(forEveryBody){ Socket.sendToOthers(messageForOthers, activity._id, activity.creator); }
         Socket.sendToCreator(activity.creator, '100009647204771', 'noSolo', activity._id, message);
-        if(notification){ Notify.changeActivityNotify(activity, creatorSurname, ntfAddressee, notification); }
+        //if(notification){ Notify.changeActivityNotify(activity, creatorSurname, ntfAddressee, notification); }
     }
 
 
