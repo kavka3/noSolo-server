@@ -6,7 +6,8 @@ var log = require('../lib/log.js')(module),
     Notification = require('./../data/notificationSchema.js'),
     User = connection.model('NoSoloUser'),//User = require('./../data/userSchema.js'),
     UserLocation = require('./../data/userLocationSchema.js'),
-    YEARMILLS = 31557600000//24 * 3600 * 365.25 * 1000
+    YEARMILLS = 31557600000//24 * 3600 * 365.25 * 1000,
+    FB = require('fb')
     ;
 
 
@@ -29,6 +30,39 @@ function checkFields(userArgs){
     }
 };
 
+function exchangeToken(userId, shortToken, callback){
+    var clientId = null,
+        clientSecret = null;
+    if(!process.env.FB_CLIENT_ID || !process.env.FB_CLIENT_SECRET){
+        console.log('IN SET FB LOCAL');
+        var config = require('../config/config');
+        clientId = config.fb.clientId;
+        clientSecret = config.fb.clientSecret;
+    }
+    else{
+        clientId = process.env.FB_CLIENT_ID;
+        clientSecret = process.env.FB_CLIENT_SECRET;
+    }
+    FB.api('oauth/access_token', {
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'fb_exchange_token',
+        fb_exchange_token: shortToken
+    }, function (res) {
+        if(!res || res.error) {
+            var resErr = !res ? 'FB error occurred' : res.error;
+            log.error(resErr);
+            callback(resErr)
+        }
+        else{
+            var accessToken = res.access_token;
+            var expires = res.expires ? res.expires : 0;
+            console.log('FB EXCHANGE SUCCESS', accessToken, expires);
+            callback(null, accessToken, expires);
+        }
+    });
+};
+
 module.exports = {
     getAllUsers: function(callback){
        User.find({}, /*'_id surname familyName created',*/ function(err,users){
@@ -37,44 +71,61 @@ module.exports = {
        })
     },
 
-    signIn: function(userArgs, callback){
-        User.findOne({_id: userArgs._id}, function (err, result) {
-            if (err) {
-                log.error(err);
-                callback(err);
-            }
-            if(common.isEmpty(result)){
-                if(checkFields(userArgs)){
-                    var savingUser = new User(userArgs);
-                    if(!userArgs.preferredAgeMin){
-                        savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
-                    }
-                    if(!userArgs.preferredAgeMax){
-                        savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
-                        getMinAge(userArgs.birthDate);
-                    }
-                    savingUser.save(function(err, savingUser, affected){
-                        if (err) {
-                            log.error(err.message);
-                            callback(err);
-                        }
-                        else{
-                            log.info('new user created: ' + savingUser._id);
+    signIn: function(userArgs, callbackDone){
+        async.waterfall([
+                function(callback){
+                    User.findOne({_id: userArgs._id}, function (err, resUser){
+                        if (err) { callback(err); }
+                        else{ callback(null, resUser); }
+                    })
+                },
+                function(resUser, callback){
+                    if(common.isEmpty(resUser)){
+                        if(checkFields(userArgs)) {
+                            var savingUser = new User(userArgs);
+                            if (!userArgs.preferredAgeMin) {
+                                savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
+                            }
+                            if (!userArgs.preferredAgeMax) {
+                                savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
+                                    getMinAge(userArgs.birthDate);
+                            }
                             callback(null, savingUser);
                         }
+                        else{ callback(new Error('not enough fields to signUp')); }
+                    }
+                    else{ callback(null, resUser); }
+                },
+                function(resUser, callback){
+                    if(userArgs.isTokenNeeded && userArgs.socialToken && userArgs.socialToken != 'some token'){
+                        //console.log('IN ASK TOKEN');
+                        exchangeToken(resUser._id, userArgs.socialToken, function(err, longToken, expires){
+                            if(err){ callback(err); }
+                            else{
+                                resUser.socialToken = longToken;
+                                callback(null, resUser);
+                            }
+                        })
+                    }
+                    else{ callback(null, resUser); }
+                },
+                function(resUser, callback){
+                    resUser.lastVisit = new Date();
+                    resUser.save(function(err, resUser){
+                        if(err){ callback(err); }
+                        else{ callback(null, resUser); }
                     })
-                }
-                else{
-                    log.error('not enough fields to signUp: ' + userArgs._id);
-                    callback(new Error('not enough fields to signUp'));
-                }
 
+                }
+            ],
+        function(err, resUser){
+            if(err){
+                log.error(err);
+                callbackDone(err);
             }
             else{
-                result.lastVisit = new Date();
-                result.save(function(err){ if(err){log.error(err)} });
-                log.info('user logged: ' + result._id);
-                callback(null, result);
+                log.info('User logged: ' + resUser._id);
+                callbackDone(null, resUser);
             }
         });
     },
@@ -231,6 +282,48 @@ module.exports = {
 function checkPass(pass, hash){
     return crypt.compareSync(pass, hash);
 };
+
+/*
+old version of signin
+User.findOne({_id: userArgs._id}, function (err, result) {
+    if (err) {
+        log.error(err);
+        callback(err);
+    }
+    if(common.isEmpty(result)){
+        if(checkFields(userArgs)){
+            var savingUser = new User(userArgs);
+            if(!userArgs.preferredAgeMin){
+                savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
+            }
+            if(!userArgs.preferredAgeMax){
+                savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
+                    getMinAge(userArgs.birthDate);
+            }
+            savingUser.save(function(err, savingUser, affected){
+                if (err) {
+                    log.error(err.message);
+                    callback(err);
+                }
+                else{
+                    log.info('new user created: ' + savingUser._id);
+                    callback(null, savingUser);
+                }
+            })
+        }
+        else{
+            log.error('not enough fields to signUp: ' + userArgs._id);
+            callback(new Error('not enough fields to signUp'));
+        }
+
+    }
+    else{
+        result.lastVisit = new Date();
+        result.save(function(err){ if(err){log.error(err)} });
+        log.info('user logged: ' + result._id);
+        callback(null, result);
+    }
+});*/
 
 
 
