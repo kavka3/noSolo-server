@@ -342,7 +342,7 @@ module.exports =  NotificationOperations = {
         notification.save(function(err){ if(err)log.error(err.message) });
         Socket.notifyToGroup(notification);
     },
-
+    //ntf to all users
     sendSystemMessage: function(message, title, callback){
         var notification = Notification({ creator: 'NoSolo', notificationType: MESSAGE_FROM_SYSTEM
             , specialData: {message: message, title: title} });
@@ -515,6 +515,23 @@ module.exports =  NotificationOperations = {
                 if(err){log.error(err); }
                 else{ log.info('Notification saved'); }
             })
+    },
+
+    SystemNtftoOne: function(userId, message, title){
+        var notification = Notification({ creator: NOSOLO_ID, addressee: userId, notificationType: MESSAGE_FROM_SYSTEM
+            , specialData: {message: message, title: title, imageUrl: 'https://s3.amazonaws.com/nosoloimages/uicon.png'} });
+
+        notification.save(function(err){
+            if(err){
+                log.error(err.message);
+            }
+            else{
+                Socket.notifyToOne(notification, function(err){
+                    if(err){ log.error(err); }
+                })
+            }
+        });
+
     }
 };
 

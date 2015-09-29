@@ -13,7 +13,8 @@ var log = require('../lib/log.js')(module),
     async = require('async'),
     s3signing = require('../lib/s3upload.js'),
     common = require('../lib/commonFunctions.js'),
-    report = require('../models/reportOperations.js')
+    report = require('../models/reportOperations.js'),
+    AppCommands = require('../models/appDictionaryOperations.js')
 
 NOT_ENOUGH_FIELDS = 'not enough fields to operation',
 
@@ -285,6 +286,7 @@ module.exports = function(app){
          Socket.notifyToOne(newNotify);*/
         //RedisTest.sendToRedis('smth');
         //changeUserRadius();
+        //NotificationOperations.SystemNtftoOne('815536061871351', 'we wanna say you hello!\nwe wanna say something else\n and agsin and again', 'hey dude');
         response.end('this is a base page, choose action in app');
     });
 
@@ -1328,6 +1330,7 @@ module.exports = function(app){
             }
         })
     });
+
     app.post('/reject_report', function(request, response){
         report.rejectReport(request.body.activityId, function(err){
             if(err){
@@ -1336,6 +1339,43 @@ module.exports = function(app){
             }
             else{ response.json({result: 'success', data: null }); }
         })
+    });
+
+    app.get('/commandDictionary', function(request, response){
+        AppCommands.getCmdDictionary(function(err, resDict){
+            if(err){
+                log.error(err);
+                response.json({
+                    result: 'error',
+                    data: 'err.message'
+            });
+            }
+            else{
+                response.json({
+                    result: 'success',
+                    data: resDict
+                });
+            }
+        });
+    });
+
+    app.post('/commandDictionary', function(request, response){
+        AppCommands.createCommand(request.body.control, request.body.command, request.body.cmdDictionary,
+            function(err, resCmd){
+                if(err){
+                    log.error(err);
+                    response.json({
+                        result: 'error',
+                        data: err.message
+                    });
+                }
+                else{
+                    response.json({
+                        result: 'success',
+                        data: resCmd
+                    });
+                }
+            })
     })
 
 
@@ -1346,37 +1386,3 @@ module.exports = function(app){
 
 
 
-/*old version with less speed
- //loop for users inside of activities
- var iteratorJ = function(userId, callbackDoneJ){
- User.findUser(userId, function(err, result){
- if(err){
- log.error(err.message);
- }
- else if(result == 'user is not found'){
- log.error('user is not found: ' + userId);
- }
- else{
- if(userId == activityUsers.creator){
- activityUsers['creatorName'] = result.surname;
- activityUsers['creatorUrl'] = result.imageUrl;
- activityUsers['about'] = result.about;
- }
- var userObj = {};
- userObj['userId'] = result._id;
- userObj['userName'] = result.surname;
- userObj['imageLink'] = result.imageUrl;
- activityUsers['joinedUsersDetails'].push(userObj);
- callbackDoneJ();
- }
- });
- };
- //loop for users runs here
- async.eachSeries(activity.joinedUsers, iteratorJ, function(err){
- if(err){
- log.error(err.message);
- callbackDoneI(err);
- }
- resJson.data.push(activityUsers);
- callbackDoneI();
- });*/
