@@ -855,15 +855,34 @@ module.exports = function(app){
      * }
      */
     app.post('/tag_dictionary', function(request, response){
-        Tag.getTagsDictionary(request.body.languages, function(err, result){
-            var resJson = {};
+        var resJson = {};
+        async.waterfall([
+            function(callback){
+                Tag.getTagsDictionary(request.body.languages, function(err, resTags){
+                    if(err){ callback(err); }
+                    else{ callback(null, resTags); }
+                });
+            },
+            function(tags, callback){
+                AppCommands.getCmdDictionary(function(err, resDict){
+                    if(err){
+                        callback(err);
+                    }
+                    else{
+                       callback(null, tags, resDict)
+                    }
+                });
+            }
+        ],
+        function(err, tags, commands){
             if(err){
                 resJson.result = 'error';
                 resJson.data = err.message;
             }
             else{
                 resJson.result = 'success';
-                resJson.data = result;
+                resJson.data = tags;
+                resJson.commands = commands;
             }
             response.json(resJson);
         });
