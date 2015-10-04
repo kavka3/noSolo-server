@@ -45,8 +45,7 @@ var userSchema = new Schema({
         required: true
     },
     email: {
-        type: String,
-        unique: true
+        type: String
     },
     imageUrl:{
         type: String,
