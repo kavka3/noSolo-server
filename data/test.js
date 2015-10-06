@@ -1,9 +1,13 @@
+/**
+ * Created by Ignat on 10/6/2015.
+ */
+
 var mongoose = require('../lib/db.js').mongoose,
     connection = require('../lib/db.js').connection,
     log = require('../lib/log.js')(module),
     async = require('async'),
     common = require('../lib/commonFunctions.js'),
-    //autoIncrement = require('mongoose-autoinc'),
+//autoIncrement = require('mongoose-autoinc'),
     Schema = mongoose.Schema,
     ObjectId = mongoose.Types.ObjectId,
     Avatar = require('./userArchive.js');
@@ -13,36 +17,24 @@ var mongoose = require('../lib/db.js').mongoose,
 var userSchema = new Schema({
     _id: {
         type: String,
-        unique: true,
-        required: true
+        unique: true
     },
     socialToken: {
         type: String,
-        required: true,
         default: 'some token'
     },
-   /* noSoloId: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        unique: true,
-        default: new ObjectId
-    },*/
     surname: {
-        type: String,
-        required: true
+        type: String
     },
     familyName: {
-        type: String,
-        required: true
+        type: String
     },
     birthDate: {
         type: Date,
-        expires: '24h',
-        required: true
+        expires: '24h'
     },
     gender: {
-        type: String,
-        required: true
+        type: String
     },
     email: {
         type: String
@@ -50,7 +42,7 @@ var userSchema = new Schema({
     imageUrl:{
         type: String,
         default: "https://s3.amazonaws.com/nosoloimages/udefault.jpg"
-    },
+    }/*,
     firstGeoLogin: {
         type: [Number],
         index: '2dsphere'
@@ -152,48 +144,8 @@ var userSchema = new Schema({
         type:Number,
         default: 0
     }
+*/
 });
 
 //userSchema.plugin(autoIncrement.plugin, 'NoSoloUser');
-module.exports = UserMaster = connection.model('NoSoloUser', userSchema);
-
-function saveAvatarChanges(self){
-    UserMaster.findById(self._id, function(err, resUser, affected){
-        if(err){
-            log. error(err);
-        }
-        else{
-            Avatar.findOne({ parentId: self._id }, function(err, oldAvatar, affected){
-                if(err){
-                    log.error(err);
-                }
-                else if(common.isEmpty(oldAvatar)){
-                    var newAvatar = new Avatar();
-                    for(var key in newAvatar._doc) {
-                        if(key != '_id' && key != '__v'){
-                            newAvatar._doc[key][newAvatar._doc[key].length] = ({ createdValue: self[key],
-                                created: new Date().toUTCString() });
-                        }
-                    }
-                    newAvatar.parentId = self._id;
-                    newAvatar.save(function(err){
-                        if(err)log.error(err);
-                        else log.info('avatar created: ' + self._id);
-                    });
-                }
-                else{
-                    common.saveArchiveInstance(oldAvatar, self);
-                }
-            });
-        }
-    });
-};
-
-userSchema.pre('save', function(next){
-    var self = this;
-    saveAvatarChanges(self);
-    next();
-});
-
-
-
+module.exports = connection.model('NoSoloTest', userSchema);

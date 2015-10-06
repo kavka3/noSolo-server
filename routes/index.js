@@ -14,7 +14,8 @@ var log = require('../lib/log.js')(module),
     s3signing = require('../lib/s3upload.js'),
     common = require('../lib/commonFunctions.js'),
     report = require('../models/reportOperations.js'),
-    AppCommands = require('../models/appDictionaryOperations.js')
+    AppCommands = require('../models/appDictionaryOperations.js'),
+    UserArchive = require('../data/userArchive.js')
 
 NOT_ENOUGH_FIELDS = 'not enough fields to operation',
 
@@ -287,6 +288,21 @@ module.exports = function(app){
         //RedisTest.sendToRedis('smth');
         //changeUserRadius();
         //NotificationOperations.SystemNtftoOne('815536061871351', 'we wanna say you hello!\nwe wanna say something else\n and agsin and again', 'hey dude');
+        /*AppCommands.getCommandBase(function(err, res){
+            if(err){response.json(err)}
+            else{ response.json(res) }
+        })*/
+        /*Tag.getAllTags(function(err, res){
+            if(err){response.json(err)}
+            else{ response.json(res) }
+        })*/
+       /* UserArchive.find({}, function(err, res){
+            if(err){response.json(err)}
+            else{
+                console.log('ARCHIVE', res);
+                response.json(res)
+            }
+        });*/
         response.end('this is a base page, choose action in app');
     });
 
@@ -360,7 +376,7 @@ module.exports = function(app){
     });
 
     app.post('/delete_user', function(request, response){
-        log.info(request.ip);
+        log.info('DELETE USER',request.ip);
         User.deleteUser(request.body._id, function(err, result){
             request.session.destroy(function(){
                 response.redirect('/');
@@ -862,7 +878,7 @@ module.exports = function(app){
                     if(err){ callback(err); }
                     else{ callback(null, resTags); }
                 });
-            },
+            }/*,
             function(tags, callback){
                 AppCommands.getCmdDictionary(function(err, resDict){
                     if(err){
@@ -872,9 +888,9 @@ module.exports = function(app){
                        callback(null, tags, resDict)
                     }
                 });
-            }
+            }*/
         ],
-        function(err, tags, commands){
+        function(err, tags/*, commands*/){
             if(err){
                 resJson.result = 'error';
                 resJson.data = err.message;
@@ -882,7 +898,7 @@ module.exports = function(app){
             else{
                 resJson.result = 'success';
                 resJson.data = tags;
-                resJson.commands = commands;
+                //resJson.commands = commands;
             }
             response.json(resJson);
         });
@@ -1360,7 +1376,7 @@ module.exports = function(app){
         })
     });
 
-    app.get('/commandDictionary', function(request, response){
+    app.get('/command_dictionary', function(request, response){
         AppCommands.getCmdDictionary(function(err, resDict){
             if(err){
                 log.error(err);

@@ -13,12 +13,20 @@ var log = require('../lib/log.js')(module),
 
 module.exports = {
     //all args should be > then 4 symbols
-    createCommand: function(ctrlName, ctrlCommand, cmdDict, callbackDone){
-        var newCommand = Dictionary({
-            control: ctrlName,
-            command: ctrlCommand,
-            cmdDictionary: cmdDict
-        });
+    createCommand: function(_id, ctrlName, ctrlCommand, cmdDict, callbackDone){
+        var newCommand = _id != null ?
+                Dictionary({
+                    _id: _id,
+                    control: ctrlName,
+                    command: ctrlCommand,
+                    cmdDictionary: cmdDict
+                }):
+                Dictionary({
+                    control: ctrlName,
+                    command: ctrlCommand,
+                    cmdDictionary: cmdDict
+                })
+            ;
         newCommand.save(function(err, resCmd){
             if(err){ callbackDone(err); }
             else{ callbackDone(null, resCmd) }
@@ -43,7 +51,13 @@ module.exports = {
                 callbackDone(null, langObj);
 
             }
-            else{ callback(new Error('Dictionary is Empty')); }
+            else{ callbackDone(new Error('Dictionary is Empty')); }
         });
+    },
+    getCommandBase: function(callbackDone){
+        Dictionary.find({}, function(err, resDict){
+            if(err){callbackDone(err);}
+            else{callbackDone(null,resDict);}
+        })
     }
 }

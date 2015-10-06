@@ -20,6 +20,7 @@ function getAge(userBirthday){
 };
 
 function checkFields(userArgs){
+
     if(userArgs.hasOwnProperty("_id") && userArgs.hasOwnProperty("socialToken") && userArgs.hasOwnProperty("surname")
         && userArgs.hasOwnProperty("familyName") && userArgs.hasOwnProperty("birthDate")
         && userArgs.hasOwnProperty("gender") ){
@@ -76,12 +77,16 @@ module.exports = {
                 function(callback){
                     User.findOne({_id: userArgs._id}, function (err, resUser){
                         if (err) { callback(err); }
-                        else{ callback(null, resUser); }
+                        else{
+                            console.log('FIND USER:', resUser);
+                            callback(null, resUser);
+                        }
                     })
                 },
                 function(resUser, callback){
                     if(common.isEmpty(resUser)){
                         if(checkFields(userArgs)) {
+                            userArgs.birthDate = new Date();
                             var savingUser = new User(userArgs);
                             if (!userArgs.preferredAgeMin) {
                                 savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
@@ -110,6 +115,7 @@ module.exports = {
                     else{ callback(null, resUser); }
                 },
                 function(resUser, callback){
+                    //console.log('Saving user',  resUser);
                     resUser.lastVisit = new Date();
                     resUser.save(function(err, resUser){
                         if(err){ callback(err); }
@@ -120,7 +126,7 @@ module.exports = {
             ],
         function(err, resUser){
             if(err){
-                log.error(err);
+                log.error('SIGNIN ERROR: ' + err);
                 callbackDone(err);
             }
             else{
