@@ -86,7 +86,7 @@ module.exports = {
                 function(resUser, callback){
                     if(common.isEmpty(resUser)){
                         if(checkFields(userArgs)) {
-                            //userArgs.birthDate = new Date();
+                            userArgs.birthDate = new Date();
                             var savingUser = new User(userArgs);
                             if (!userArgs.preferredAgeMin) {
                                 savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
