@@ -37,7 +37,7 @@ var userSchema = new Schema({
     },
     birthDate: {
         type: Date,
-        expires: '24h',
+        //expires: '24h',
         required: true
     },
     gender: {
