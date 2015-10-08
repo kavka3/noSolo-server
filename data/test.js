@@ -30,8 +30,7 @@ var userSchema = new Schema({
         type: String
     },
     birthDate: {
-        type: Date,
-        expires: '24h'
+        type: Date
     },
     gender: {
         type: String
@@ -42,7 +41,7 @@ var userSchema = new Schema({
     imageUrl:{
         type: String,
         default: "https://s3.amazonaws.com/nosoloimages/udefault.jpg"
-    }/*,
+    },
     firstGeoLogin: {
         type: [Number],
         index: '2dsphere'
@@ -144,7 +143,6 @@ var userSchema = new Schema({
         type:Number,
         default: 0
     }
-*/
 });
 
 //userSchema.plugin(autoIncrement.plugin, 'NoSoloUser');

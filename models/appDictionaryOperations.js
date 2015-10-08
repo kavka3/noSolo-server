@@ -27,11 +27,13 @@ module.exports = {
                     cmdDictionary: cmdDict
                 })
             ;
+        console.log('NEW COMMAND', newCommand);
         newCommand.save(function(err, resCmd){
             if(err){ callbackDone(err); }
             else{ callbackDone(null, resCmd) }
         })
     },
+
     getCmdDictionary: function(callbackDone){
         Dictionary.find({}, function(err, resDict){
             if(err){ callbackDone(err); }
@@ -54,6 +56,7 @@ module.exports = {
             else{ callbackDone(new Error('Dictionary is Empty')); }
         });
     },
+
     getCommandBase: function(callbackDone){
         Dictionary.find({}, function(err, resDict){
             if(err){callbackDone(err);}

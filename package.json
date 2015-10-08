@@ -33,7 +33,7 @@
     "fb": "^0.7.3",
     "fs": "0.0.2",
     "install": "^0.1.8",
-    "mongodb": "^2.0.24",
+    "mongodb": "^2.0.45",
     "mongodb-uri": "^0.9.7",
     "mongoose": "^4.1.9",
     "mongoose-autoinc": "0.0.2",

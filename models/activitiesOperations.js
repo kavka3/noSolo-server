@@ -125,7 +125,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         };break;
         case 'maxMembers':{
             if(changedFields.length == 1){
-                var maxMembers = activity.maxMembers < 1000 ? activity.maxMembers: 'unlimited';
+                var maxMembers = activity.maxMembers > 20? activity.maxMembers: 'unlimited';
                 message =  'You ' + CHANGED_MAX_MEMBERS + maxMembers;
                 messageForOthers = creatorSurname + CHANGED_MAX_MEMBERS + maxMembers;
                 notification = '# of participants changed'
@@ -411,7 +411,7 @@ module.exports = ActivityOperations = {
                         log.error(err);
                         callback(err);
                     }
-                    //Socket.chatClosed(activityId, result.joinedUsers);
+                    Socket.chatClosed(activityId, result.joinedUsers);
                     common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);

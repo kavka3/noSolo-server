@@ -1395,7 +1395,7 @@ module.exports = function(app){
     });
 
     app.post('/commandDictionary', function(request, response){
-        AppCommands.createCommand(request.body.control, request.body.command, request.body.cmdDictionary,
+        AppCommands.createCommand(null, request.body.control, request.body.command, request.body.cmdDictionary,
             function(err, resCmd){
                 if(err){
                     log.error(err);
@@ -1411,7 +1411,26 @@ module.exports = function(app){
                     });
                 }
             })
-    })
+    }),
+
+        app.get('/command_base', function(request, response){
+            AppCommands.getCommandBase(function(err, resDict){
+                if(err){
+                    log.error(err);
+                    response.json({
+                        result: 'error',
+                        data: 'err.message'
+                    });
+                }
+                else{
+                    response.json({
+                        result: 'success',
+                        data: resDict
+                    });
+                }
+            });
+        });
+
 
 
 
