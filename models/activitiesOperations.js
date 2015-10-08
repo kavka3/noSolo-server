@@ -125,7 +125,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         };break;
         case 'maxMembers':{
             if(changedFields.length == 1){
-                var maxMembers = activity.maxMembers > 20? activity.maxMembers: 'unlimited';
+                var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
                 message =  'You ' + CHANGED_MAX_MEMBERS + maxMembers;
                 messageForOthers = creatorSurname + CHANGED_MAX_MEMBERS + maxMembers;
                 notification = '# of participants changed'
