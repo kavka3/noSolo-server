@@ -158,7 +158,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
                             Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id);
                             //message for joiner not for creator
-                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity. Wellcome!');
+                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity. Welcome!');
                             callback(null, resAct, resUser);
 
                         }

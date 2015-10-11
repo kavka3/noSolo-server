@@ -1423,6 +1423,7 @@ module.exports = function(app){
                     });
                 }
                 else{
+                    console.log('COMMAND BASE LENGTH', resDict.length);
                     response.json({
                         result: 'success',
                         data: resDict
