@@ -12,7 +12,14 @@ var log = require('../lib/log.js')(module),
 
 
 module.exports = {
-    //all args should be > then 4 symbols
+
+    update: function(command, callback){
+        Dictionary.findByIdAndUpdate(command._id, command, {new: true}, function(err, updatedCommand){
+            if(err){ callback(err); }
+            else{ callback(null, updatedCommand); }
+        })
+    },
+
     createCommand: function(_id, ctrlName, ctrlCommand, cmdDict, callbackDone){
         var newCommand = _id != null ?
                 Dictionary({
@@ -61,6 +68,13 @@ module.exports = {
         Dictionary.find({}, function(err, resDict){
             if(err){callbackDone(err);}
             else{callbackDone(null,resDict);}
+        })
+    },
+
+    findById: function(id, callback){
+        Dictionary.findById(id, function(err, resCommand){
+            if(err){ callback(err); }
+            else{ callback(null, resCommand); }
         })
     }
 }
