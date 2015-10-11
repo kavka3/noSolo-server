@@ -158,7 +158,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
                             Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id);
                             //message for joiner not for creator
-                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity. Welcome!');
+                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity.');
                             callback(null, resAct, resUser);
 
                         }
@@ -250,9 +250,9 @@ module.exports =  NotificationOperations = {
     joinApprove: function(activityCreator, joiningUser, activityId, notificationId, callbackResult){
         async.waterfall([
                 function(callback){
-                    addUserToActivity(activityCreator, activityId, joiningUser, false, function(err, result){
+                    addUserToActivity(activityCreator, activityId, joiningUser, false, function(err, resAct){
                         if(err){ callback(err); }
-                        else{ callback(null); }
+                        else{ callback(null, resAct); }
                     })
                 }
                 /* ,
@@ -267,10 +267,10 @@ module.exports =  NotificationOperations = {
                     else{ callback(null); }
                 }
                  */,
-                function(callback){
+                function(activity, callback){
                     if(activityCreator){
                         var notification = new Notification({ creator: activityCreator , addressee: joiningUser
-                            , notificationType: JOIN_ACTIVITY, specialData: { activityId: activityId} });
+                            , notificationType: JOIN_ACTIVITY, specialData: { activityId: activityId, activityTitle: activity.title } });
                         notification.save(function(err){ if(err)log.error(err.message) });
                         Socket.notifyToOne(notification, function(err){
                             if(err){ callback(err); }
