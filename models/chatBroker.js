@@ -84,16 +84,29 @@ var ChatManager = {
                             if(messageInd < chat.messages.length){
                                 messageArray = chat.messages.slice(messageInd, chat.messages.length);
                             }
+                            callback(null, messageArray, null);
                         }
                         else{
                             messageArray = chat.messages;
-                            chat.messageBox.push({ userId: userId, messageId: null });
+                            Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
+                                { $set: { 'messageBox.$.messageId': null } }, { upsert: true },
+                                function (err, result) {
+                                    if (err) {
+                                        log.error(err);
+                                        callback(err);
+                                    }
+                                    else {
+                                        log.info('user message box updated: ' + userId + ' ' + chatId);
+                                        callback(null, messageArray, null);
+                                    }
+                                }
+                            );
+                            /*chat.messageBox.push({ userId: userId, messageId: null });
                             chat.save(function(err){
                                 if(err){ callback(err); }
                                 else{ log.info('user message box created: ' + userId); }
-                            });
+                            });*/
                         }
-                        callback(null, messageArray, null);
                     }
                     else{
                        /* log.info('there are no new messages for user: ' + userId + 'in chat: ' + chatId);*/
