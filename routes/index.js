@@ -351,6 +351,7 @@ module.exports = function(app){
      * }
      */
     app.post('/signIn', function(request, response){
+        console.log('USER SIGN IN:', request.body);
         User.signIn(request.body, function(err, result){
             if(err){
                 response.json({result: "error", data: err.message});
