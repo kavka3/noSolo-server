@@ -22,8 +22,7 @@ function getAge(userBirthday){
 function checkFields(userArgs){
 
     if(userArgs.hasOwnProperty("_id") && userArgs.hasOwnProperty("socialToken") && userArgs.hasOwnProperty("surname")
-        && userArgs.hasOwnProperty("familyName") && userArgs.hasOwnProperty("birthDate")
-        && userArgs.hasOwnProperty("gender") ){
+        && userArgs.hasOwnProperty("familyName") ){
         return true;
     }
     else{
