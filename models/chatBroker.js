@@ -81,32 +81,34 @@ var ChatManager = {
                         if(!common.isEmpty(userBox) && !common.isEmpty(userBox.messageId)){
                             var messageInd = chat.messages.indexOf(userBox.messageId);
                             messageInd++;
+                            log.info('MESSAGE BOX CHECK id, indicator, msg-length : ' + chat._id + ' ' + messageInd + ' ' + chat.messages.length )
                             if(messageInd < chat.messages.length){
                                 messageArray = chat.messages.slice(messageInd, chat.messages.length);
                             }
-                            callback(null, messageArray, null);
+                            //callback(null, messageArray, null);
                         }
                         else{
                             messageArray = chat.messages;
-                            Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
-                                { $set: { 'messageBox.$.messageId': null } }, { upsert: true },
-                                function (err, result) {
-                                    if (err) {
-                                        log.error(err);
-                                        callback(err);
-                                    }
-                                    else {
-                                        log.info('user message box updated: ' + userId + ' ' + chatId);
-                                        callback(null, messageArray, null);
-                                    }
-                                }
-                            );
+
                             /*chat.messageBox.push({ userId: userId, messageId: null });
                             chat.save(function(err){
                                 if(err){ callback(err); }
                                 else{ log.info('user message box created: ' + userId); }
                             });*/
                         }
+                        Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
+                            { $set: { 'messageBox.$.messageId': chat.messages[chat.messages.length - 1] } }, /*{ upsert: true },*/
+                            function (err, result) {
+                                if (err) {
+                                    log.error(err);
+                                    callback(err);
+                                }
+                                else {
+                                    log.info('user message box updated: ' + userId + ' ' + chatId);
+                                    callback(null, messageArray, null);
+                                }
+                            }
+                        );
                     }
                     else{
                        /* log.info('there are no new messages for user: ' + userId + 'in chat: ' + chatId);*/

@@ -77,7 +77,7 @@ module.exports = {
                     User.findOne({_id: userArgs._id}, function (err, resUser){
                         if (err) { callback(err); }
                         else{
-                            console.log('FIND USER:', resUser);
+                            //console.log('FIND USER:', resUser);
                             callback(null, resUser);
                         }
                     })
