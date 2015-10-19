@@ -1270,7 +1270,7 @@ module.exports = function(app){
                             });
                         }
                         else{
-                            callback(null, null);
+                            callback(null, []);
                         }
 
                         //}
