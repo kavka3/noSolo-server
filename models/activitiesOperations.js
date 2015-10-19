@@ -617,10 +617,8 @@ module.exports = ActivityOperations = {
                     tryToSave(createdActivity, activityChat, callback);
                 },
                 function(createdActivity, activityChat, user, callback){
-                    Socket.addToChat(createdActivity.creator, activityChat._id, function(err){
-                        if(err){ callback(err) }
-                        else{ callback(null, createdActivity, user); }
-                    });
+                    Socket.addToChat(createdActivity.creator, activityChat._id);
+                    callback(null, createdActivity, user);
 
                 },
                 function(createdActivity, user, callback){

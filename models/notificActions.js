@@ -123,10 +123,8 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                 }
                                 else{
                                     console.log('IN ADD TO CHAT: ',userId);
-                                    Socket.addToChat(userId, resAct._id, function(err){
-                                        if(err){ callback(err); }
-                                        else{  callback(null, changedAct); }
-                                    });
+                                    Socket.addToChat(userId, resAct._id);
+                                    callback(null, changedAct);
 
                                 }
                             }
@@ -160,8 +158,10 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             var message = resUser.surname + ' joined ' + resAct.title;
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
                             Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id);
-                            //message for joiner not for creator
-                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity.');
+                            setTimeout(function(){
+                                //message for joiner not for creator
+                                Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity.');
+                            }, 2000);
                             callback(null, resAct, resUser);
 
                         }
