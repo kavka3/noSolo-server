@@ -123,8 +123,11 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                 }
                                 else{
                                     console.log('IN ADD TO CHAT: ',userId);
-                                    Socket.addToChat(userId, resAct._id);
-                                    callback(null, changedAct)
+                                    Socket.addToChat(userId, resAct._id, function(err){
+                                        if(err){ callback(err); }
+                                        else{  callback(null, changedAct); }
+                                    });
+
                                 }
                             }
                         });

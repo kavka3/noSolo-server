@@ -34,7 +34,7 @@ module.exports = {
                     cmdDictionary: cmdDict
                 })
             ;
-        console.log('NEW COMMAND', newCommand);
+        //console.log('NEW COMMAND', newCommand);
         newCommand.save(function(err, resCmd){
             if(err){ callbackDone(err); }
             else{ callbackDone(null, resCmd) }
