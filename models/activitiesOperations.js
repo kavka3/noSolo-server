@@ -411,7 +411,7 @@ module.exports = ActivityOperations = {
                         log.error(err);
                         callback(err);
                     }
-                    Socket.chatClosed(activityId, result.joinedUsers, result.creator);
+                    Socket.chatClosed(activityId, result.joinedUsers, result.creator, result.title);
                     common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);
@@ -587,7 +587,7 @@ module.exports = ActivityOperations = {
                         }
                         else if(attemptToSave < COUNTER){
                             log.info('CANT GET ACTIVITY TIME: ', Date.now() - start);
-                            console.log(createdActivity._id, user);
+                            //console.log(createdActivity._id, user);
                             attemptToSave++;
                             log.info('RISING COUNTER: ', attemptToSave);
                             setTimeout(tryToSave(createdActivity, activityChat, callback), DELAY);
@@ -718,7 +718,7 @@ module.exports = ActivityOperations = {
             if(err){ callback(err); }
             else if(common.isEmpty(resAct)){ callback(new Error('activity not found')); }
             else{
-                log.info('checkPlaces', resAct);
+                //log.info('checkPlaces');
                 if(resAct.joinedUsers.length >= resAct.maxMembers){ callback(null, false); }
                 else{ callback(null, true, resAct.title); }
             }
