@@ -208,7 +208,7 @@ var ChatManager = {
                     for(var i = 0; i < messageBox.length; i++){
                         if (messageBox[i].userId == userId) {
                             Chat.findOneAndUpdate({ _id: response.chatId, 'messageBox.userId': response.userId },
-                                { $set: { 'messageBox.$.messageId': response.messageId } }, { upsert: true },
+                                { $set: { 'messageBox.$.messageId': response.messageId } },
                                 function (err, result) {
                                     if (err) {
                                         log.error(err);
