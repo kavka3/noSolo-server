@@ -201,14 +201,29 @@ var ChatManager = {
                 var userId = response.userId;
                 var messageBox = resultChat.messageBox;
                 if(messageBox.length == 0) {
-                    messageBox.push({ userId: response.userId, messageId: response.messageId });
-                    saveMessage(response, resultChat, messageBox, callback);
+                    Chat.findOneAndUpdate({_id: response.chatId},
+                        { $push:{ messageBox: {
+                            userId: response.userId,
+                            messageId: response.messageId
+                        } } }, function(err, result){
+                            if (err) {
+                                log.error(err);
+                                callback(err);
+                            }
+                            else {
+                                log.info('response saved: ' + response.userId + ' '
+                                    + response.chatId + ' ' + response.messageId);
+                                callback(null);
+                            }
+                        });
+                    /*messageBox.push({ userId: response.userId, messageId: response.messageId });
+                    saveMessage(response, resultChat, messageBox, callback);*/
                 }
                 else{
-                    for(var i = 0; i < messageBox.length; i++){
-                        if (messageBox[i].userId == userId) {
+                    //for(var i = 0; i < messageBox.length; i++){
+                        //if (messageBox[i].userId == userId) {
                             Chat.findOneAndUpdate({ _id: response.chatId, 'messageBox.userId': response.userId },
-                                { $set: { 'messageBox.$.messageId': response.messageId } },
+                                { $set: { 'messageBox.$.messageId': response.messageId } }, {upsert: true},
                                 function (err, result) {
                                     if (err) {
                                         log.error(err);
@@ -221,13 +236,14 @@ var ChatManager = {
                                     }
                                 }
                             );
-                            break;
-                        }
-                        else if(i == (messageBox.length - 1)){
-                            messageBox.push({ userId: response.userId, messageId: response.messageId });
-                            saveMessage(response, resultChat, messageBox, callback);
-                        }
-                    }
+                            //return;
+                        //}
+                       /* else if(i == (messageBox.length - 1)){
+
+                            /!*messageBox.push({ userId: response.userId, messageId: response.messageId });
+                            saveMessage(response, resultChat, messageBox, callback);*!/
+                        }*/
+                    //}
                 }
             }
 
