@@ -415,7 +415,7 @@ module.exports = ActivityOperations = {
                         callback(err);
                     }
                     log.info('activity found and deleted: ' + result[0]._id);
-                    Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator._id);
+                    Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator.surname);
                     common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);
