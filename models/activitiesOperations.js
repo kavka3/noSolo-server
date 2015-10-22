@@ -395,7 +395,11 @@ module.exports = ActivityOperations = {
 
     //delete in cascade style: with activity userFields, chat and tags;
     deleteActivity: function(activityId, callback){
-        Activity.findById(activityId, function(err, result, affected){
+        var query = Activity
+                .find({_id: activityId })
+                .populate('creator', '_id surname')
+            ;
+        query.exec(function(err, result){
             if (err) {
                 log.error(err);
                 callback(err);
@@ -405,13 +409,13 @@ module.exports = ActivityOperations = {
                 callback(new Error('Activity is not found'));
             }
             else {
-                log.info('activity found: ' + result.title);
-                result.remove(function(err) {
+                Activity.findByIdAndRemove(activityId, function(err) {
                     if (err){
                         log.error(err);
                         callback(err);
                     }
-                    Socket.chatClosed(activityId, result.joinedUsers, result.creator, result.title);
+                    log.info('activity found and deleted: ' + result[0]._id);
+                    Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator._id);
                     common.deleteReminder(activityId, function(err, res){});
                     log.info('activity deleted');
                     callback(null);

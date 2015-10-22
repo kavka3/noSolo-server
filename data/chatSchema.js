@@ -12,7 +12,10 @@ var chatSchema = new Schema({
             ref: 'NoSoloMessage'
         }],
         messageBox: [{//userId & last messageId
-            userId: String,
+            userId: {
+                type: String/*,
+                unique: true*/
+            },
             messageId: String
         }],
         chatStatus: {
