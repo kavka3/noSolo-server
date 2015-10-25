@@ -37,13 +37,20 @@ var ChatManager = {
             function(resChat, callback){
                 var messages = resChat.messages;
                 if(!common.isEmpty(messages)){
-                    var msgBox = {userId: userId, messageId: messages[messages.length - 1]};
+                   /* var msgBox = {userId: userId, messageId: messages[messages.length - 1]};
                     //console.log('LAST MESSAGE ADDED: ', msgBox);
                     resChat.messageBox.push(msgBox);
                     resChat.save(function(err, result){
                         if(err){callback(err); }
                         else{ callback(null, result) }
-                    })
+                    })*/
+                    Chat.findOneAndUpdate({ _id: chatId },
+                        { $push: { messageBox :{userId: userId, messageId: messages[messages.length - 1]}} }, { upsert: true },
+                        function (err, result) {
+                            if(err){callback(err); }
+                            else{ callback(null, result); }
+                        }
+                    );
                 }
                 else{ callback(null, resChat); }
 
