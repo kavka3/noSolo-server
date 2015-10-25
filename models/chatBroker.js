@@ -104,7 +104,7 @@ var ChatManager = {
                             });*/
                         }
                         Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
-                            { $set: { 'messageBox.$.messageId': chat.messages[chat.messages.length - 1] } }, /*{ upsert: true },*/
+                            { $set: { 'messageBox.$.messageId': chat.messages[chat.messages.length - 1] } }, { upsert: true },
                             function (err, result) {
                                 if (err) {
                                     log.error(err);
