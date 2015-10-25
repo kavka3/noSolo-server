@@ -103,19 +103,36 @@ var ChatManager = {
                                 else{ log.info('user message box created: ' + userId); }
                             });*/
                         }
-                        Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
-                            { $set: { 'messageBox.$.messageId': chat.messages[chat.messages.length - 1] } }, { upsert: true },
-                            function (err, result) {
-                                if (err) {
-                                    log.error(err);
-                                    callback(err);
+                        if(userBox){
+                            Chat.findOneAndUpdate({ _id: chatId, 'messageBox.userId': userId },
+                                { $set: { 'messageBox.$.messageId': chat.messages[chat.messages.length - 1] } }, /*{ upsert: true },*/
+                                function (err, result) {
+                                    if (err) {
+                                        log.error(err);
+                                        callback(err);
+                                    }
+                                    else {
+                                        log.info('user message box updated: ' + userId + ' ' + chatId);
+                                        callback(null, messageArray, null);
+                                    }
                                 }
-                                else {
-                                    log.info('user message box updated: ' + userId + ' ' + chatId);
-                                    callback(null, messageArray, null);
+                            );
+                        }
+                        else{
+                            Chat.findOneAndUpdate({ _id: chatId },
+                                { $push: { messageBox: { userId: userId,messageId: chat.messages[chat.messages.length - 1] } } }, { upsert: true },
+                                function (err, result) {
+                                    if (err) {
+                                        log.error(err);
+                                        callback(err);
+                                    }
+                                    else {
+                                        log.info('user message box updated: ' + userId + ' ' + chatId);
+                                        callback(null, messageArray, null);
+                                    }
                                 }
-                            }
-                        );
+                            );
+                        }
                     }
                     else{
                        /* log.info('there are no new messages for user: ' + userId + 'in chat: ' + chatId);*/
