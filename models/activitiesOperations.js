@@ -409,16 +409,26 @@ module.exports = ActivityOperations = {
                 callback(new Error('Activity is not found'));
             }
             else {
-                Activity.findByIdAndRemove(activityId, function(err) {
+                Activity.findById(activityId, function(err, resAct) {
                     if (err){
                         log.error(err);
                         callback(err);
                     }
-                    log.info('activity found and deleted: ' + result[0]._id);
-                    Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator.surname);
-                    common.deleteReminder(activityId, function(err, res){});
-                    log.info('activity deleted');
-                    callback(null);
+                    else if(!common.isEmpty(resAct)){
+                        resAct.remove(function(err, res){
+                            if(err){
+                                log.error(err);
+                                callback(err);
+                            }
+                            else{
+                                log.info('activity found and deleted: ' + result[0]._id);
+                                Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator.surname);
+                                common.deleteReminder(activityId, function(err, res){});
+                                log.info('activity deleted');
+                                callback(null);
+                            }
+                        })
+                    }
                 });
             }
         });

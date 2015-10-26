@@ -287,7 +287,7 @@ module.exports = function(app){
          Socket.notifyToOne(newNotify);*/
         //RedisTest.sendToRedis('smth');
         //changeUserRadius();
-        //NotificationOperations.SystemNtftoOne('815536061871351', 'we wanna say you hello!\nwe wanna say something else\n and agsin and again', 'hey dude');
+        //NotificationOperations.SystemNtftoOne('526139373', 'we wanna say you hello!\nwe wanna say something else\n and agsin and again', 'hey dude');
         /*AppCommands.getCommandBase(function(err, res){
             if(err){response.json(err)}
             else{ response.json(res) }
@@ -1414,7 +1414,7 @@ module.exports = function(app){
             })
     }),
 
-        app.get('/command_base', function(request, response){
+    app.get('/command_base', function(request, response){
             AppCommands.getCommandBase(function(err, resDict){
                 if(err){
                     log.error(err);

@@ -15,6 +15,7 @@ function getMinAge(userBirthday){
     var age = (Math.round(((Date.now()  - new Date(userBirthday))/YEARMILLS)/2 + 7));
     return age < 0 ? 0 : age;
 };
+
 function getAge(userBirthday){
    return  (Math.round((Date.now()  - new Date(userBirthday))/YEARMILLS));
 };
