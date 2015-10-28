@@ -8,6 +8,7 @@ var log = require('../lib/log.js')(module),
     Socket = require('../lib/socket.js'),
     Notify = require('./notificActions.js'),
     Invite = require('./../data/inviteSchema.js'),
+    mongoose = require('mongoose'),
 
     RADIUS = 6371,//earth radius in km
     CHAT_CLOSED = 'chat is closed by activity creator',
@@ -15,7 +16,7 @@ var log = require('../lib/log.js')(module),
     DELAY = 2000,
     COUNTER = 3,
 
-    WELCOME_MESSAGE = 'Activity successfully created\n Tap on "Info" and invite friends to join IN on the fun!',
+
     CHANGED_TIME = ' changed the time of the activity',
     MULTI_PARAMS_MSG = 'You changed some details in the activity',
     MULTI_PARAMS_MSG_OTHERS = ' changed some details in the activity\n check it out',
@@ -30,7 +31,12 @@ var log = require('../lib/log.js')(module),
     CHANGED_PRIVATE_YES = ' changed this activity to private invite your friends to join it',
     CHANGED_DESCRIPTION = 'You described this activity differently ',
     CHANGED_TITLE = 'You changed the title',
-    NTF_MULTI_MSG = 'some details in activity changed. Check it out'
+    NTF_MULTI_MSG = 'some details in activity changed. Check it out',
+
+    NOSOLO_ID = '100009647204771',
+    NOSOLO_NAME = 'noSolo',
+    WELCOME_MESSAGE = 'Activity successfully created\n Tap on "Info" and invite friends to join IN on the fun!',
+    WELCOME_ACTIVITY_MESSAGE = 'Welcome to noSolo here you can tell us what you want'
 
     ;
 
@@ -580,7 +586,7 @@ module.exports = ActivityOperations = {
     },
 
     //creates activity,activity chat, updates creator and tags: adds activity, returns created
-    createActivity: function(activity, callbackDone){
+    createActivity: function(activity, isWelcome, callbackDone){
         //counting attempts to save activity
         var attemptToSave = 0;
         function tryToSave(createdActivity, activityChat, callback){
@@ -636,15 +642,17 @@ module.exports = ActivityOperations = {
 
                 },
                 function(createdActivity, user, callback){
-                    if(user.settings.isSendReminder && user.settings.multipleReminders &&
-                        user.settings.multipleReminders.length > 0){
-                        common.setMultipleReminder(user, createdActivity, callback);
-                    }
-                    else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
-                        common.setReminder(user, createdActivity, callback);
+                    if(!isWelcome){
+                        if(user.settings.isSendReminder && user.settings.multipleReminders &&
+                            user.settings.multipleReminders.length > 0){
+                            common.setMultipleReminder(user, createdActivity, callback);
+                        }
+                        else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
+                            common.setReminder(user, createdActivity, callback);
+                        }
+                        else{ callback(null, createdActivity, user); }
                     }
                     else{ callback(null, createdActivity, user); }
-
                 },
                 function(createdActivity, user, callback){
                     if(common.isEmpty(createdActivity.tags)){
@@ -666,10 +674,18 @@ module.exports = ActivityOperations = {
                 }
                 else{
                     log.info('ACTIVITY CREATED');
-                    //console.log(createdActivity);
+                    //delete createdActivity.creator;
+                    var activityCopy = common.deepObjClone(createdActivity);
+                    activityCopy['creator'] = {
+                        _id: user._id,
+                        surname: user.surname,
+                        imageUrl: user.imageUrl,
+                        familyName: user.familyName
+                    };
+                    console.log(activityCopy);
                     //console.log(user);
-                    Socket.sendToCreator(user._id,'100009647204771', 'noSolo', createdActivity._id, WELCOME_MESSAGE );
-                    callbackDone(null, createdActivity);
+                    if(!isWelcome){ Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activityCopy._id, WELCOME_MESSAGE ); }
+                    callbackDone(null, activityCopy);
                 }
             })
     },
@@ -751,6 +767,68 @@ module.exports = ActivityOperations = {
             if(err){ callback(err); }
             else{ callback(null, resActivities); }
         })
+    },
+
+    createWelcomeActivity: function(userId){
+        async.waterfall([
+                function(callback){
+                    log.info('createWelcomeActivity userId', userId);
+                    var startTime = new Date();
+                    var finishTime = new Date();
+                    finishTime.setHours(24);
+                    var welcomeActivity = {
+                        title: 'Chat with noSolo',
+                        description: 'Tell us how we can help you',
+                        imageUrl: 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
+                        location: [34.85992, 32.33292],
+                        creator: '198803877117851',//TODO change to noSolo page id 100009647204771
+                        timeStart: startTime,
+                        timeFinish: finishTime,
+                        maxMembers: 2,
+                        isPrivate: true
+                    };
+                    ActivityOperations.createActivity(welcomeActivity, true, function(err, resAct){
+                        if(err){
+                            log.error(err);
+                            callback(err);
+                        }
+                        else{callback(null, resAct);}
+                    });
+                },
+                function(resAct, callback){
+                    User.findByIdAndUpdate(userId,{ $push: { activitiesJoined: resAct._id } }, {new: true},
+                        function(err, resUser){
+                            if(err){ callback(err); }
+                            else{ callback(null, resAct, resUser); }
+                        })
+                },
+                function(resAct, resUser, callback){
+                    Activity.findByIdAndUpdate(resAct._id, {$push: { joinedUsers: userId } }, { new: true },
+                    function(err, changedAct){
+                        if(err){ callback(err); }
+                        else{ callback(null, resUser, changedAct); }
+                    })
+                },
+                function( resUser, resAct, callback){
+                    Socket.addToChat(userId, resAct._id);
+                    setTimeout(function(){
+                        //message for joiner not for creator
+                        Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, WELCOME_ACTIVITY_MESSAGE);
+                    }, 2000);
+                    callback(null, resAct, resUser)
+                }
+
+        ],
+        function(err, resAct, resUser){
+            if(err){
+                console.error('WELCOME ACTIVITY ERROR: ', err);
+            }
+            else{
+                log.info('welcome activity created for user: ' + resUser._id);
+            }
+
+        });
+
     }
 
 };
