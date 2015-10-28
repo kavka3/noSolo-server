@@ -486,7 +486,7 @@ module.exports = function(app){
         var resJson = {};
         var activityObj = checkActivityFields(request.body);
         if(activityObj.result != 'error'){
-            Activity.createActivity(activityObj, function(err, result){
+            Activity.createActivity(activityObj, false, function(err, result){
                 if(err){
                     resJson.result = 'error';
                     resJson.data = err.message;//may be damaged from tagsOperations 28
