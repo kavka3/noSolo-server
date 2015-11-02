@@ -3,7 +3,7 @@ var connection = require('../lib/db.js').connection;
 var Schema = mongoose.Schema;
 
 var chatSchema = new Schema({
-        usersInChat: [{//userId
+        usersInChat: [{//userId uses now only for support chats
             type: String,
             ref: 'NoSoloUser'
         }],
@@ -13,8 +13,8 @@ var chatSchema = new Schema({
         }],
         messageBox: [{//userId & last messageId
             userId: {
-                type: String/*,
-                unique: true*/
+                type: String,
+                unique: true
             },
             messageId: String
         }],
@@ -22,6 +22,20 @@ var chatSchema = new Schema({
             type: Boolean,
             required: true,
             default: true
+        },
+        crm:{
+            isSeen: {
+                type: Boolean,
+                default: false
+            },
+            isTask: {
+                type: Boolean,
+                default: false
+            },
+            isDone: {
+                type: Boolean,
+                default: false
+            }
         }
     }
 );
