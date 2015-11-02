@@ -160,7 +160,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id);
                             setTimeout(function(){
                                 //message for joiner not for creator
-                                Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined activity.');
+                                Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined.');
                             }, 2000);
                             callback(null, resAct, resUser);
 
