@@ -6,8 +6,10 @@ var log = require('../lib/log.js')(module),
     Notification = require('./../data/notificationSchema.js'),
     User = connection.model('NoSoloUser'),//User = require('./../data/userSchema.js'),
     UserLocation = require('./../data/userLocationSchema.js'),
-    YEARMILLS = 31557600000//24 * 3600 * 365.25 * 1000,
+    YEARMILLS = 31557600000,//24 * 3600 * 365.25 * 1000,
     FB = require('fb')
+
+
     ;
 
 
@@ -73,6 +75,7 @@ module.exports = {
     },
 
     signIn: function(userArgs, callbackDone){
+        var isSignUp = false;
         async.waterfall([
                 function(callback){
                     User.findOne({_id: userArgs._id}, function (err, resUser){
@@ -86,7 +89,8 @@ module.exports = {
                 function(resUser, callback){
                     if(common.isEmpty(resUser)){
                         if(checkFields(userArgs)) {
-                            //console.log('USER BIRTHDATE: ', userArgs.birthDate);
+                            console.log('USER NOT FOUND: ', resUser);
+                            isSignUp = true;
                             //var date = new Date(userArgs.birthDate);
                             //console.log('NEW DATE: ', date);
                             //userArgs.birthDate = date;
@@ -102,11 +106,14 @@ module.exports = {
                         }
                         else{ callback(new Error('not enough fields to signUp')); }
                     }
-                    else{ callback(null, resUser); }
+                    else{
+                        //console.log('SENDING OLD USER', resUser);
+                        callback(null, resUser);
+                    }
                 },
                 function(resUser, callback){
+                    console.log('IN ASK TOKEN', isSignUp);
                     if(userArgs.isTokenNeeded && userArgs.socialToken && userArgs.socialToken != 'some token'){
-                        //console.log('IN ASK TOKEN');
                         exchangeToken(resUser._id, userArgs.socialToken, function(err, longToken, expires){
                             if(err){ callback(err); }
                             else{
@@ -125,7 +132,18 @@ module.exports = {
                         else{ callback(null, resUser); }
                     })
 
-                }
+                }/*,
+                function(resUser, callback){
+                    if(isSignUp){
+                        console.log('WELCOME ACTIVITY CREATING', isSignUp);
+                        var Activity = require('./activitiesOperations.js');
+                        Activity.createWelcomeActivity(resUser._id);
+                        callback(null, resUser);
+                    }
+                    else{
+                        callback(null, resUser);
+                    }
+                }*/
             ],
         function(err, resUser){
             if(err){
