@@ -48,6 +48,8 @@ var log = require('../lib/log.js')(module),
     YOU = 34,
     CHANGE_TITLE_1 = 36,
     CHANGE_TITLE_2 = 37,
+    FROM = 39,
+    TO = 40,
 
     NOSOLO_ID = '100009647204771',
     NOSOLO_NAME = 'noSolo',
@@ -89,14 +91,16 @@ function getAddressee(activity){
     return addrs;
 };
 
-function sendUpdateNtf(activity, creatorSurname, changedFields){
+function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
     var usersIds = activity.joinedUsers.map(function(user){
         return user._id;
     });
     var message =  [{ commandId: MULTI_PARAMS_MSG }],
         forEveryBody = true,
         shouldSend = true,
-        messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }];
+        messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }],
+        messageForPush = null
+        ;
         //notification = null,
         //ntfAddressee = getAddressee(activity);
     ;
@@ -197,13 +201,21 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
             if(changedFields.length == 1) {
                 message = [{ commandId: CHANGED_TITLE }];
                 messageForOthers = [ { commandId: CHANGE_TITLE_1 }, { param: creatorSurname }, { commandId: CHANGE_TITLE_2 } ];
+                messageForPush = [
+                    { param: creatorSurname },
+                    { commandId: CHANGE_TITLE_2 },
+                    { commandId: FROM },
+                    { param: oldActivity.title },
+                    { commandId: TO },
+                    { param: activity.title }
+                ]
             }
         };break;
 
         default: shouldSend = false; break;
 
     }
-    console.log('IN CANGE FIELDS SHOULD SEND', shouldSend);
+    //console.log('IN CHANGE FIELDS SHOULD SEND', shouldSend);
     //TODO 1 make processing to client side should send message with all languages and choose language to show message in app see todo 2 at the end of the file
     /*server should do:
      if(shouldSend){
@@ -223,7 +235,12 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
                         resUsers.forEach(function(user){
                             if(user._id != activity.creator._id){
                                 var resultMessage = createMessage(user.systemLanguage, messageForOthers);
-                                Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage);
+                                var pushMsg = null;
+                                if(messageForPush){
+                                    pushMsg = createMessage(user.systemLanguage, messageForPush );
+                                    console.log('Push message', pushMsg);
+                                }
+                                Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
                             }
                         });
                     }
@@ -353,7 +370,7 @@ module.exports = ActivityOperations = {
                 }
                 else{
                     //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
-                    sendUpdateNtf(resAct, activityObj['creatorName'], activityObj['changedField']);
+                    sendUpdateNtf(resAct, activityObj['creatorName'], activityObj['changedField'], activityObj);
                     callback(null, resAct);
                 }
             })
