@@ -25,10 +25,13 @@ var log = require('../lib/log.js')(module),
     UPDATE_APP = 11,
     ACTIVITY_REMINDER = 12,
 //recurStatus:
-    JOINED = 1,
-    DISCLAIMED = 2,
+    /*JOINED = 1,
+    DISCLAIMED = 2,*/
     NOSOLO_ID = '100009647204771',
-    NOSOLO_NAME = 'noSolo'
+    NOSOLO_NAME = 'noSolo',
+    JOINED = ' joined ',
+    JOINED_USERS_FIELDS = '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber',
+    CREATOR_FIELDS = '_id surname familyName imageUrl'
 /*,
  SHOULD_FIND = 'find it in FES',
  FIND_ACT = 'find activity and join'*/
@@ -105,7 +108,10 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                     log.info('notificActions IN ADD USER TO ACTIVITY');
                     Activity.findOneAndUpdate({ _id: resAct._id },
                         {$push: {joinedUsers: userId}},
-                        {new: true, upsert: true, runValidators: true}, function (err, changedAct) {
+                        {new: true, upsert: true, runValidators: true})
+                        .populate('creator', CREATOR_FIELDS)
+                        .populate('joinedUsers', JOINED_USERS_FIELDS)
+                        .exec(function (err, changedAct) {
                             if (err) {
                                 callback(err)
                             }
@@ -128,7 +134,8 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
 
                                 }
                             }
-                        });
+                        })
+                    ;
                 }
                 /*resAct.joinedUsers.push(userId);
                 if(isRecur){ resAct.recurUsers = changeRecurStatus(resAct.recurUsers, userId, JOINED); }
@@ -155,9 +162,10 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                     , notificationType: USER_JOINS_ACTIVITY, specialData: specialData });
                             notification.save(function(err){ if(err)log.error(err.message) });
                             Socket.notifyToOne(notification);
-                            var message = resUser.surname + ' joined.' ;
+                            var message = resUser.surname + JOINED;
+                            var messageForPush = resUser.surname + JOINED + resAct.title;
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
-                            Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id);
+                            Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id, messageForPush);
                             setTimeout(function(){
                                 //message for joiner not for creator
                                 Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined.');
@@ -257,19 +265,7 @@ module.exports =  NotificationOperations = {
                         if(err){ callback(err); }
                         else{ callback(null, resAct); }
                     })
-                }
-                /* ,
-               function(callback){
-                    if(activityCreator){
-                        User.findByIdAndUpdate(activityCreator, { $pull: {notifications: notificationId } },
-                            function(err, result){
-                                if(err){ callback(err); }
-                                else{ callback(null);}
-                            })
-                    }
-                    else{ callback(null); }
-                }
-                 */,
+                },
                 function(activity, callback){
                     if(activityCreator){
                         var notification = new Notification({ creator: activityCreator , addressee: joiningUser
@@ -280,16 +276,16 @@ module.exports =  NotificationOperations = {
                             else{ callback(null); }
                         })
                     }
-                    else{ callback(null); }
+                    else{ callback(null, activity); }
                 }
             ],
-            function(err){
+            function(err, activity){
                 if(err){
                     log.info(err);
                     callbackResult(err) ;
                 }
                 else{
-                    callbackResult(null);
+                    callbackResult(null, activity);
                 }
             }
         )
@@ -406,8 +402,9 @@ module.exports =  NotificationOperations = {
             , notificationType: USER_LEAVE_ACTIVITY, specialData: specialData });
         notification.save(function(err){ if(err)log.error(err.message) });
         Socket.notifyToOne(notification);
-        var message = user.surname + ' left ' + activity.title;
-        Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false);
+        var message = user.surname + ' left';
+        var pushMessage = user.surname + ' left ' + activity.title;
+        Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, false, pushMessage);
     },
 
     activityRecur: function(creatorId, activityId, recurUsers){

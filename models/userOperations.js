@@ -137,7 +137,7 @@ module.exports = {
                     if(isSignUp){
                         console.log('WELCOME ACTIVITY CREATING', isSignUp);
                         var Activity = require('./activitiesOperations.js');
-                        Activity.createWelcomeActivity(resUser._id);
+                        Activity.createWelcomeActivity(resUser._id, resUser.systemLanguage);
                         callback(null, resUser);
                     }
                     else{
@@ -303,6 +303,13 @@ module.exports = {
                 if(err){ callback(err); }
                 else{ console.log('DEVICEID SAVED'); callback(null); }
             });
+    },
+
+    getByDiscover: function(activityId, callbackDone){
+        User.find({discoveredActivities: activityId}, '_id', function(err, resUsers){
+            if(err){callbackDone(err); }
+            else{ callbackDone(null, resUsers); }
+        })
     }
 };
 

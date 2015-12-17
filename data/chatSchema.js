@@ -24,6 +24,10 @@ var chatSchema = new Schema({
             default: true
         },
         crm:{
+            isSupport: {
+                type: Boolean,
+                default: false
+            },
             isSeen: {
                 type: Boolean,
                 default: false
@@ -35,6 +39,14 @@ var chatSchema = new Schema({
             isDone: {
                 type: Boolean,
                 default: false
+            },
+            isAdmin:{
+                type: Boolean,
+                default: false,
+                adminId: {
+                    type: String,
+                    ref: 'NoSoloUser'
+                }
             }
         }
     }

@@ -4,8 +4,10 @@ var log = require('../lib/log.js')(module),
     Chat = require('./../data/chatSchema.js'),
     Message = require('./../data/messageSchema.js'),
     User = require('./userOperations.js'),
+
     CHAT_CLOSED = 'chat is closed by activity creator',
-    NOT_ENOUGH_FIELDS = 'not enough fields'
+    NOT_ENOUGH_FIELDS = 'not enough fields',
+    NOSOLO_CHAT = '198803877117851'
     ;
 
 
@@ -88,7 +90,7 @@ var ChatManager = {
                         if(!common.isEmpty(userBox) && !common.isEmpty(userBox.messageId)){
                             var messageInd = chat.messages.indexOf(userBox.messageId);
                             messageInd++;
-                            log.info('MESSAGE BOX CHECK id, indicator, msg-length : ' + chat._id + ' ' + messageInd + ' ' + chat.messages.length )
+                            //log.info('MESSAGE BOX CHECK id, indicator, msg-length : ' + chat._id + ' ' + messageInd + ' ' + chat.messages.length )
                             if(messageInd < chat.messages.length){
                                 messageArray = chat.messages.slice(messageInd, chat.messages.length);
                             }
@@ -112,7 +114,7 @@ var ChatManager = {
                                         callback(err);
                                     }
                                     else {
-                                        log.info('user message box updated: ' + userId + ' ' + chatId);
+                                        //log.info('user message box updated: ' + userId + ' ' + chatId);
                                         callback(null, messageArray, null);
                                     }
                                 }
@@ -120,14 +122,14 @@ var ChatManager = {
                         }
                         else{
                             Chat.findOneAndUpdate({ _id: chatId },
-                                { $push: { messageBox: { userId: userId,messageId: chat.messages[chat.messages.length - 1] } } }, { upsert: true },
+                                { $push: { messageBox: { userId: userId, messageId: chat.messages[chat.messages.length - 1] } } },
                                 function (err, result) {
                                     if (err) {
                                         log.error(err);
                                         callback(err);
                                     }
                                     else {
-                                        log.info('user message box updated: ' + userId + ' ' + chatId);
+                                        //log.info('user message box updated: ' + userId + ' ' + chatId);
                                         callback(null, messageArray, null);
                                     }
                                 }
@@ -176,12 +178,21 @@ var ChatManager = {
         });
     },
 
+    createPushMessage: function(userId, userName, chatId, messageForPush){
+        return {
+            creator: userId,
+            userName: userName,
+            chatId: chatId,
+            messageText: messageForPush
+        }
+    },
     createMessage: function(userId, userName, chatId, message, messageId, notForCreator, callback){
         if(common.isEmpty(userId) || common.isEmpty(userName) || common.isEmpty(chatId) || common.isEmpty(message)){
             callback(new Error(NOT_ENOUGH_FIELDS));
         }
         else{
             var nfc = notForCreator ? notForCreator : { notForCreator : false, activityCreator: null, notForOthers: false, joinedUser: false };
+            console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc )
             var message = new Message({ _id: messageId, creator: userId, userName: userName, chatId: chatId,
                 messageText: message, notForCreator: nfc });
             //console.log(message);
@@ -203,6 +214,16 @@ var ChatManager = {
                         }
                         else{
                             log.info('message saved: ' + message.messageText);
+                            //console.log('chat params', result);
+                            if(result.crm.isSupport && message.creator != NOSOLO_CHAT){
+                                /*var changedCrm = result.crm;
+                                changedCrm.isSeen = false;*/
+                                Chat.findByIdAndUpdate(chatId, { $set: { 'crm.$.isSeen' : false } }, {new: true},
+                                    function(err, resChat){
+                                        if(err){ log.error(err); }
+                                        else{ console.log('support chat updated', resChat._id); }
+                                    })
+                            }
                             callback(null, message);
                         }
                     });
@@ -306,6 +327,39 @@ var ChatManager = {
                 callback(null);
             });
         }
+    },
+
+    getSupportChats: function(userId, callbackDone){
+        var uId = userId ? userId: NOSOLO_CHAT;
+        var query = Chat
+            .find({ usersInChat: uId }, '_id usersInChat messages crm')
+            .populate('messages')
+                .populate('usersInChat', '_id surname familyName imageUrl')
+
+        ;
+        query.exec(function(err, resChats){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resChats); }
+        })
+    },
+    getChat: function(chatId, callbackDone){
+        var query = Chat
+                .findById(chatId, '_id usersInChat messages crm')
+                .populate('messages')
+                .populate('usersInChat', '_id surname familyName imageUrl')
+            ;
+        query.exec(function(err, resChat){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resChat); }
+        })
+    },
+
+    updateSupportChat: function(chatId){
+        Chat.findByIdAndUpdate(chatId, { $set: { 'crm.isSeen' : true } }, {new: true},
+            function(err, resChat){
+                if(err){ log.error(err); }
+                else{ console.info('updateSupportChat support chat updated', resChat._id); }
+            })
     }
 
 };

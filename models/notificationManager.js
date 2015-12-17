@@ -5,9 +5,7 @@ var log = require('../lib/log.js')(module),
     connection = require('../lib/db.js').connection,
     async = require('async'),
     common = require('../lib/commonFunctions.js'),
-    redis = require('redis'),
-    url = require('url'),
-    NotificationBox,
+    NotificationBox = require('../lib/redisConnection.js').client,
     LocalStorage = [],
     SocketStorage = [],
     User = connection.model('NoSoloUser'),
@@ -22,7 +20,9 @@ function getIds(users){
         for(var i = 0; i < users.length; i++){
             if(users[i]['settings']['isNtfApproved'] && users[i].uniqueDeviceId){
                 for(var j = 0; j < users[i].uniqueDeviceId.length; j++ ){
-                    udids.push(users[i].uniqueDeviceId[j]);
+                    var deviceId = users[i].uniqueDeviceId[j];
+                    deviceId['systemLanguage'] = users[i].systemLanguage;
+                    udids.push(deviceId);
                 }
             }
         }
@@ -42,27 +42,10 @@ function getIdsToOne(user){
     return udid;
 };
 
-
-function setNotificationBox(){
-    if(!common.isEmpty(process.env.REDISCLOUD_URL)){
-        log.info('in set NB on heroku');
-        var redisURL = url.parse(process.env.REDISCLOUD_URL );
-        NotificationBox = redis.createClient(redisURL.port, redisURL.hostname, {no_ready_check: true});
-        NotificationBox.auth(redisURL.auth.split(":")[1]);
-    }
-    else{
-        log.info('in set NB local');
-        NotificationBox = redis.createClient();
-    }
-
-};
-
-setNotificationBox();
-
 var NotificationManager = {
     clearRedis: function(callback){
-        NotificationBox.del('chat_socketIds', redis.print);
-        NotificationBox.del('socket_chatIds', redis.print);
+        NotificationBox.del('chat_socketIds', NotificationBox.print);
+        NotificationBox.del('socket_chatIds', NotificationBox.print);
         NotificationBox.hgetall('chat_socketIds', function(result){
             console.log(result);
             callback();
@@ -81,8 +64,8 @@ var NotificationManager = {
     },*/
 
     addToSocketBox: function(userId, socketId){
-        NotificationBox.hmset('chat_socketIds', userId, socketId, redis.print);
-        NotificationBox.hmset('socket_chatIds', socketId, userId, redis.print);
+        NotificationBox.hmset('chat_socketIds', userId, socketId, NotificationBox.print);
+        NotificationBox.hmset('socket_chatIds', socketId, userId, NotificationBox.print);
         NotificationBox.hmget('chat_socketIds', userId, function(err, resId){
             if(err){log.error(err); }
             else{ log.info('SOCKET ADDED TO SOCKET BOX: ' + userId + ' ' + resId); }
@@ -97,11 +80,11 @@ var NotificationManager = {
                         if(err){ callback(err); }
                         else{
                             NotificationBox.hdel('chat_socketIds', userId, function(){
-                                redis.print;
+                                NotificationBox.print;
                                 log.info('USER LEAVE APP: ' + userId);
                             });
                             NotificationBox.hdel('socket_chatIds', socketId, function(){
-                                redis.print;
+                                NotificationBox.print;
                                 log.info('SOCET CLEARED: ' + userId);
                                 callback();
                             });
@@ -222,7 +205,7 @@ var NotificationManager = {
         NotificationBox.smembers(notificationId, function(err, inSystem){
             if(err){ log.error(err); }
             else{
-                NotificationBox.DEL(notificationId, redis.print);
+                NotificationBox.DEL(notificationId, NotificationBox.print);
                 callback(common.arrayDifference(users, inSystem));
             }
         });
@@ -319,8 +302,8 @@ var NotificationManager = {
                     callback(err);
                 }
                 else{
-                    log.info('in user find:');
-                    console.log(resUsers);
+                    //log.info('in user find:');
+                    //console.log(resUser);
                     var devicesIds = getIdsToOne(resUser);
                     callback(null, devicesIds);
                 }

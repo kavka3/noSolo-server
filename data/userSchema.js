@@ -86,6 +86,10 @@ var userSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'NoSoloActivity'
     }],
+    discoveredActivities: [{
+        type: Schema.Types.ObjectId,
+        ref: 'NoSoloActivity'
+    }],
     tagsPreferences: [{
         type: String,
         ref: 'NoSoloTag'
@@ -103,12 +107,12 @@ var userSchema = new Schema({
     userLanguage: {
         type: String,
         required: true,
-        default: 'eng'
+        default: 'en'//it was eng should to check it in functions
     },
     systemLanguage: {
         type: String,
         required: true,
-        default: 'eng'
+        default: 'en'//it was eng should to check it in functions
     },
     about: {
         type: String
@@ -127,7 +131,7 @@ var userSchema = new Schema({
         }
     },
     uniqueDeviceId: [{
-        type: Schema.Types.Mixed//type: 'ios' || 'android' && deviceId: String
+        type: Schema.Types.Mixed//type: 'ios' || 'android' && deviceId: String && ntfLang: 'en' || 'he'
     }],
     notifications: [{
         type: Schema.Types.ObjectId,

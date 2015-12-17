@@ -9,35 +9,56 @@ var log = require('../lib/log.js')(module),
     Notify = require('./notificActions.js'),
     Invite = require('./../data/inviteSchema.js'),
     mongoose = require('mongoose'),
+    commandDictionary = require('./serverDictionaryOperations.js').dictionary,
+    checkLanguage = require('./serverDictionaryOperations.js').checkLanguage,
+    createMessage = require('./serverDictionaryOperations.js').createMessage,
+
 
     RADIUS = 6371,//earth radius in km
     CHAT_CLOSED = 'chat is closed by activity creator',
     NOT_APPROVED = 0,
     DELAY = 2000,
     COUNTER = 3,
+    JOINED_USERS_FIELDS = '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber',
+    CREATOR_FIELDS = '_id surname familyName imageUrl',
 
-
-    CHANGED_TIME = ' changed the time of the activity',
-    MULTI_PARAMS_MSG = 'You changed some details in the activity',
-    MULTI_PARAMS_MSG_OTHERS = ' changed some details in the activity\n check it out',
-    CHANGED_LOCATION = 'You changed the location',
-    CHANGED_MAX_MEMBERS_FOR_OTHERS = 'More spots are now available, invite your friends!',
-    CHANGED_MAX_MEMBERS = ' changed the # of participants to ',
-    JOIN_APPROVE_YES = 'You really made sure people would show up for the fun',
-    JOIN_APPROVE_NO = 'You just made it easier for others to join IN',
-    CHANGED_TAGS = 'You re-defined the tags on this one',
-    CHANGED_PRIVATE_NO = 'You changed the visibility of this activity to public, making it available for other noSoloers to join on the fun.',
-    CHANGED_PRIVATE_NO_FOR_OTHERS = 'This activity is now public, increasing the chances of this activity happening!',
-    CHANGED_PRIVATE_YES = ' changed this activity to private invite your friends to join it',
-    CHANGED_DESCRIPTION = 'You described this activity differently ',
-    CHANGED_TITLE = 'You changed the title',
-    NTF_MULTI_MSG = 'some details in activity changed. Check it out',
+    //ids of server commands
+    CHANGED_TIME = 9,
+    MULTI_PARAMS_MSG = 10,
+    MULTI_PARAMS_MSG_OTHERS = 11,
+    CHANGED_LOCATION = 12,
+    CHANGED_MAX_MEMBERS_FOR_OTHERS = 13,
+    CHANGED_MAX_MEMBERS = 14,
+    JOIN_APPROVE_YES = 15,
+    JOIN_APPROVE_NO = 16,
+    CHANGED_TAGS = 17,
+    CHANGED_PRIVATE_NO = 18,
+    CHANGED_PRIVATE_NO_FOR_OTHERS = 19,
+    CHANGED_PRIVATE_YES = 20,
+    CHANGED_DESCRIPTION = 21,
+    CHANGE_DESCRIPTION_1 = 22,
+    CHANGE_DESCRIPTION_2 = 23,
+    CHANGED_TITLE = 24,
+    NTF_MULTI_MSG = 25,
+    TIME_CHANGED_NTF = 26,
+    ACTIVITY_CHANGED_NTF_1 = 27,
+    ACTIVITY_CHANGED_NTF_2 = 28,
+    ACTIVITY_NTF_CREATOR = 29,
+    MAX_MEMBERS_NTF = 35,
+    YOU = 34,
+    CHANGE_TITLE_1 = 36,
+    CHANGE_TITLE_2 = 37,
 
     NOSOLO_ID = '100009647204771',
     NOSOLO_NAME = 'noSolo',
-    WELCOME_MESSAGE = 'Activity successfully created\n Tap on "Info" and invite friends to join IN on the fun!',
-    WELCOME_ACTIVITY_MESSAGE = 'Welcome to noSolo here you can tell us what you want'
-
+    NOSOLO_CHAT = '198803877117851',
+    WELCOME_MESSAGE = 30,
+    WELCOME_ACTIVITY_MESSAGE = 31,
+    WELCOME_TITLE = 32,
+    WELCOME_DESCRIPTION = 33,
+    WELCOME_URL = 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
+    WELCOME_LOCATION = [34.85992, 32.33292],
+    ActivityOperations = null
     ;
 
 function calculateDistance(cords1, cords2){
@@ -69,12 +90,15 @@ function getAddressee(activity){
 };
 
 function sendUpdateNtf(activity, creatorSurname, changedFields){
-    var message = MULTI_PARAMS_MSG,
+    var usersIds = activity.joinedUsers.map(function(user){
+        return user._id;
+    });
+    var message =  [{ commandId: MULTI_PARAMS_MSG }],
         forEveryBody = true,
         shouldSend = true,
-        messageForOthers = creatorSurname + MULTI_PARAMS_MSG_OTHERS,
-        notification = null,
-        ntfAddressee = getAddressee(activity);
+        messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }];
+        //notification = null,
+        //ntfAddressee = getAddressee(activity);
     ;
 
     console.log('IN CHANGE FIELDS:', changedFields[0]);
@@ -96,7 +120,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
             else{
                 async.waterfall([
                     function(callback){
-                        User.find({ '_id': {$in: activity.joinedUsers } }, function(err, resUsers){
+                        User.find({ '_id': {$in: usersIds } }, function(err, resUsers){
                            if(err){ callback(err); }
                             else{ callback(null, resUsers); }
                         });
@@ -115,63 +139,64 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
             }
         });
         if(changedFields.length <= 2){
-            message = 'You' + CHANGED_TIME;
-            messageForOthers = creatorSurname + CHANGED_TIME;
-            notification = 'activity time changed';
+            message = [{commandId: YOU},{commandId: CHANGED_TIME } ];
+            messageForOthers = [{ param: creatorSurname},  { commandId: CHANGED_TIME }];
+
         }
-        else{ notification = NTF_MULTI_MSG; }
+
     };break;
         case 'location': {
             if(changedFields.length == 1){
-                message = CHANGED_LOCATION;
-                messageForOthers = 'Heads up ' + creatorSurname + ' changed the location';
-                notification = 'activity location changed'
+                message = [{ commandId: CHANGED_LOCATION }];
+                messageForOthers = [{ commandId: ACTIVITY_CHANGED_NTF_1}, {param: creatorSurname}, { commandId: ACTIVITY_CHANGED_NTF_2 }];
+
             }
-            else{ notification = NTF_MULTI_MSG; }
+
         };break;
         case 'maxMembers':{
             if(changedFields.length == 1){
                 var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
-                message =  'You ' + CHANGED_MAX_MEMBERS + maxMembers;
-                messageForOthers = creatorSurname + CHANGED_MAX_MEMBERS + maxMembers;
-                notification = '# of participants changed'
+                message =  [{ commandId: YOU} , { commandId: CHANGED_MAX_MEMBERS} , { param: maxMembers }];
+                messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_MAX_MEMBERS }, { param: maxMembers }];
+                console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
             }
-            else{ notification = NTF_MULTI_MSG; }
+
         };break;
         case 'isApprovalNeeded':{
             if(changedFields.length == 1) {
-                if (activity.isApprovalNeeded) { message = JOIN_APPROVE_YES; }
-                else { message = JOIN_APPROVE_NO; }
+                if (activity.isApprovalNeeded) { message = [{ commandId: JOIN_APPROVE_YES }]; }
+                else { message = [{ commandId: JOIN_APPROVE_NO }]; }
             }
             forEveryBody = false;
         };break;
         case 'tags':{
-            if(changedFields.length == 1) { message = CHANGED_TAGS; }
-            forEveryBody = false;
+           /* if(changedFields.length == 1) { message = [{ commandId: CHANGED_TAGS }]; }
+            forEveryBody = false;*/
+            shouldSend = false;
         };break;
         case 'isPrivate':{
             //console.log('IN PRIVATE CASE: ', activity);
             if(changedFields.length == 1) {
                 if(activity.isPrivate){
-                    message = 'You' + CHANGED_PRIVATE_YES;
-                    messageForOthers = creatorSurname + CHANGED_PRIVATE_YES;
+                    message = [{ commandId: YOU }, { commandId: CHANGED_PRIVATE_YES }];
+                    messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_PRIVATE_YES }];
                 }
                 else{
-                    message = CHANGED_PRIVATE_NO;
-                    messageForOthers = CHANGED_PRIVATE_NO_FOR_OTHERS;
+                    message = [{ commandId: CHANGED_PRIVATE_NO }];
+                    messageForOthers = [{ commandId: CHANGED_PRIVATE_NO_FOR_OTHERS }];
                 }
             }
         };break;
         case 'description': {
             if(changedFields.length == 1) {
-                message = CHANGED_DESCRIPTION;
-                messageForOthers = 'For better or for best, ' + creatorSurname + ' changed the info on this activity' ;
+                message = [{ commandId: CHANGED_DESCRIPTION}];
+                messageForOthers = [{ commandId: CHANGE_DESCRIPTION_1 }, { param: creatorSurname }, { commandId: CHANGE_DESCRIPTION_2 }];
             }
         };break;
         case 'title':{
             if(changedFields.length == 1) {
-                message = CHANGED_TITLE;
-                messageForOthers = 'if this isn’t spontaneous enough, ' + creatorSurname + ' just renamed the activity' ;
+                message = [{ commandId: CHANGED_TITLE }];
+                messageForOthers = [ { commandId: CHANGE_TITLE_1 }, { param: creatorSurname }, { commandId: CHANGE_TITLE_2 } ];
             }
         };break;
 
@@ -179,14 +204,58 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
 
     }
     console.log('IN CANGE FIELDS SHOULD SEND', shouldSend);
+    //TODO 1 make processing to client side should send message with all languages and choose language to show message in app see todo 2 at the end of the file
+    /*server should do:
+     if(shouldSend){
+     if(forEveryBody){
+     Socket.sendToOthers(messageForOthers, activity._id, activity.creator);
+     }
+     Socket.sendToCreator(activity.creator, NOSOLO_ID, NOSOLO_NAME, activity._id, message);
+     }
+    *
+    * */
     if(shouldSend){
-        if(forEveryBody){ Socket.sendToOthers(messageForOthers, activity._id, activity.creator); }
-        Socket.sendToCreator(activity.creator, '100009647204771', 'noSolo', activity._id, message);
-        //if(notification){ Notify.changeActivityNotify(activity, creatorSurname, ntfAddressee, notification); }
+        if(forEveryBody){
+            var users = User.find({ '_id': { $in: usersIds } },
+                function(err, resUsers){
+                    if(err){log.error(err); }
+                    else{
+                        resUsers.forEach(function(user){
+                            if(user._id != activity.creator._id){
+                                var resultMessage = createMessage(user.systemLanguage, messageForOthers);
+                                Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage);
+                            }
+                        });
+                    }
+                });
+        }
+        user = User.findById(activity.creator._id, function(err, resUser){
+            if(err){ log.error(err); }
+            else{
+                var resultMessage = createMessage(resUser.systemLanguage, message);
+                Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage);
+            }
+        })
+
     }
 
 
 };
+
+function checkDictionary(){
+    if(common.isEmpty(commandDictionary)){
+        var serverCommands = require('./serverDictionaryOperations.js');
+        serverCommands.getDictionary(function(err, resDict){
+            if(err){ log.error(err); }
+            else{
+                commandDictionary = resDict;
+                console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
+            }
+        })
+    }
+}
+
+checkDictionary();
 
 module.exports = ActivityOperations = {
 
@@ -194,9 +263,8 @@ module.exports = ActivityOperations = {
     getPending: function(actIds, userId, callback){
         var query = Activity
             .find({ '_id': { $in: actIds } })
-            .populate('joinedUsers',
-            '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
-            .populate('creator', '_id surname familyName imageUrl')
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .populate('creator', CREATOR_FIELDS)
         ;
             //.limit(100);
         query.exec(function(err, resActivity){
@@ -238,8 +306,7 @@ module.exports = ActivityOperations = {
         searchObj[criteria] = value;
         var query = Activity
             .find(searchObj)
-            .populate('joinedUsers',
-            '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
             .populate('creator', '_id surname familyName imageUrl')
             //.populate('tags', '_title tagDictionary imageUrl')
             .limit(100);
@@ -272,21 +339,24 @@ module.exports = ActivityOperations = {
         //var activityObj = common.deepObjClone(activity);
         //delete activityObj._id;
         //if(activityObj.creator){ activityObj.creator = activityObj.creator._id; }
-        Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true}, function(err, resAct){
-            if (err) {
-                log.error(err);
-                callback(err);
-            }
-            else if(common.isEmpty(resAct)){
-                log.info('activity is not found');
-                callback(null, 'activity is not found');
-            }
-            else{
-                //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
-                sendUpdateNtf(resAct, activityObj['creatorName'], activityObj['changedField']);
-                callback(null, resAct);
-            }
-        })
+        Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true})
+            .populate('creator', CREATOR_FIELDS)
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .exec(function(err, resAct){
+                if (err) {
+                    log.error(err);
+                    callback(err);
+                }
+                else if(common.isEmpty(resAct)){
+                    log.info('activity is not found');
+                    callback(null, 'activity is not found');
+                }
+                else{
+                    //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
+                    sendUpdateNtf(resAct, activityObj['creatorName'], activityObj['changedField']);
+                    callback(null, resAct);
+                }
+            })
     },
 
     updateImage: function(activity, callback){
@@ -310,67 +380,98 @@ module.exports = ActivityOperations = {
     },
 
     //discover activity
-    searchLocation : function(requestObj, callback){
-        var searchDistance = (requestObj.radius / RADIUS),
-            startSearch = new Date();
-        startSearch.setSeconds(-30);
-        var query = Activity
-            .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
-            .where('timeFinish').gt(Date.now())
-            //.where('created').lt(startSearch)
-            .where('_id').nin(requestObj.notFindArray)
-            .where('isPrivate').ne(true)
-            //.where('joinedUsers').size(4)
-            .populate('joinedUsers', '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber')
-            .populate('creator', '_id surname familyName imageUrl')
-            //.populate('tags', '_title tagDictionary imageUrl')
-            .limit(100);
-        query.exec(function(err, resActivity){
-            if (err) {
-                log.error(err);
-                callback(err);
-            }
-            /* else if(common.isEmpty(resActivity)){
-             log.info('activity is not found');
-             callback(null, 'activity is not found');
-             }*/
-            else {
-                var i = 0, length = resActivity.length, actArr = [];
-                for(; i < length; i++){
-                    if(resActivity[i].joinedUsers.length < resActivity[i].maxMembers){
-                        var actObj = common.deepObjClone(resActivity[i]);
-                        delete actObj['tagsByLanguage'];
-                        actObj.tags = resActivity[i]['tagsByLanguage'];
-                        actArr.push(actObj);
+    searchLocation : function(requestObj, callbackDone){
+        async.waterfall([
+            function(callback){
+                var searchDistance = (requestObj.radius / RADIUS),
+                    startSearch = new Date();
+                startSearch.setSeconds(-30);
+                var query = Activity
+                    .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
+                    .where('timeFinish').gt(Date.now())
+                    //.where('created').lt(startSearch)
+                    .where('_id').nin(requestObj.notFindArray)
+                    .where('isPrivate').ne(true)
+                    //.where('joinedUsers').size(4)
+                    .populate('joinedUsers', JOINED_USERS_FIELDS)
+                    .populate('creator', '_id surname familyName imageUrl')
+                    //.populate('tags', '_title tagDictionary imageUrl')
+                    .limit(100);
+                query.exec(function(err, resActivity){
+                    if (err) {
+                        log.error(err);
+                        callback(err);
                     }
-                };
-                //console.log('IN RETURN ', actArr);
-                callback(null, actArr);
+                    /* else if(common.isEmpty(resActivity)){
+                     log.info('activity is not found');
+                     callback(null, 'activity is not found');
+                     }*/
+                    else {
+                        var i = 0, length = resActivity.length, actArr = [];
+                        for(; i < length; i++){
+                            if(resActivity[i].joinedUsers.length < resActivity[i].maxMembers){
+                                var actObj = common.deepObjClone(resActivity[i]);
+                                delete actObj['tagsByLanguage'];
+                                actObj.tags = resActivity[i]['tagsByLanguage'];
+                                actArr.push(actObj);
+                            }
+                        };
+                        //console.log('IN RETURN ', actArr);
+                        callback(null, actArr);
+                    }
+                })
+            },
+            function(activities, callback){
+                var activitiesIds = activities.map(function(activity){
+                    return activity._id/*mongoose.Types.ObjectId(activity._id)*/;
+                });
+                //console.log('Discover user update activitiesIds', activitiesIds);
+                requestObj.user.discoveredActivities = activitiesIds;
+                requestObj.user.save(function(err, resUser){
+                    if(err){ callback(err) }
+                    else{
+                        //console.log('Discover user update', resUser);
+                        callback(null, activities)
+                    }
+                })
             }
+
+        ], function(err, activities){
+            if(err){
+                log.error(err);
+                callbackDone(err);
+            }
+            else{ callbackDone(null, activities) }
         })
     },
 
     //remove user from activity and chat change user fields
     removeUserFromActivity: function(activityId, userId, callbackDone){
+        console.log('IN REMOVE USER FROM ACTIVITY');
         async.waterfall([
                 function(callback){
                     Activity.findByIdAndUpdate(activityId,
-                        { $pull: { joinedUsers: userId, activitiesLiked: { activityId: activityId } } }, { new: true },
-                        function(err, activity){
-                            if(err){ callback(err); }
-                            else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
-                            else{ callback(null, activity); }
-                        })
+                        { $pull: { joinedUsers: userId, activitiesLiked: { activityId: activityId } } }, { new: true })
+                        .populate('creator', CREATOR_FIELDS)
+                        .populate('joinedUsers', JOINED_USERS_FIELDS)
+                        .exec(function(err, activity){
+                                if(err){ callback(err); }
+                                else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
+                                else{ callback(null, activity); }
+                            })
                 },
                 function(activity, callback){
-                    Chat.findByIdAndUpdate(activityId, {$pull: { joinedUsers: userId }},
+                    Chat.findByIdAndUpdate(activityId, {$pull: { usersInChat: userId } },  {new: true},
                         function(err, chat){
                             if(err){ callback(err); }
-                            else{ callback(null, activity) }
+                            else{
+                                console.log('AFTER CHAT CHANGES', chat);
+                                callback(null, activity)
+                            }
                         })
                 },
                 function(activity, callback){
-                    User.findByIdAndUpdate(userId, {$pull:{ activitiesJoined: activityId } },
+                    User.findByIdAndUpdate(userId, {$pull:{ activitiesJoined: mongoose.Types.ObjectId(activityId) } },
                         {new: true}, function(err, changedUser){
                             if (err){
                                 log.error(err);
@@ -394,6 +495,7 @@ module.exports = ActivityOperations = {
                     callbackDone(err);
                 }
                 else{
+                    Socket.sendMyActivityLeave(userId, activity._id);
                     callbackDone(null, activity);
                 }
             })
@@ -622,7 +724,7 @@ module.exports = ActivityOperations = {
                 function(callback){
                     //console.log('IN WATERFALL: ', activity)
                     var createdActivity = new Activity(activity);
-                    console.log('Created activity', createdActivity);
+                    //console.log('Created activity', createdActivity);
                     var activityChat = new Chat( { _id: createdActivity._id, usersInChat:[activity.creator] });
                     createdActivity.joinedUsers.push(activity.creator);
                     callback(null, createdActivity, activityChat);
@@ -676,15 +778,22 @@ module.exports = ActivityOperations = {
                     log.info('ACTIVITY CREATED');
                     //delete createdActivity.creator;
                     var activityCopy = common.deepObjClone(createdActivity);
-                    activityCopy['creator'] = {
+                    var creator ={
                         _id: user._id,
                         surname: user.surname,
                         imageUrl: user.imageUrl,
                         familyName: user.familyName
                     };
-                    console.log(activityCopy);
+                    activityCopy['creator'] = creator;
+                    activityCopy.joinedUsers = [creator];
+                    //console.log(activityCopy);
                     //console.log(user);
-                    if(!isWelcome){ Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activityCopy._id, WELCOME_MESSAGE ); }
+                    if(!isWelcome){
+                        var userLang = checkLanguage(user.systemLanguage);
+                        console.log("USER LANGUAGE:", userLang, commandDictionary );
+                        Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activityCopy._id,
+                            commandDictionary[userLang][WELCOME_MESSAGE] );
+                    }
                     callbackDone(null, activityCopy);
                 }
             })
@@ -744,15 +853,17 @@ module.exports = ActivityOperations = {
     },
 
     checkPlaces: function(activityId, callback){
-        Activity.findById(activityId, function(err, resAct){
-            if(err){ callback(err); }
-            else if(common.isEmpty(resAct)){ callback(new Error('activity not found')); }
-            else{
-                //log.info('checkPlaces');
-                if(resAct.joinedUsers.length >= resAct.maxMembers){ callback(null, false); }
-                else{ callback(null, true, resAct.title); }
-            }
-        })
+        Activity.findById(activityId)
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .exec(function(err, resAct){
+                if(err){ callback(err); }
+                else if(common.isEmpty(resAct)){ callback(new Error('activity not found')); }
+                else{
+                    //log.info('checkPlaces');
+                    if(resAct.joinedUsers.length >= resAct.maxMembers){ callback(null, false); }
+                    else{ callback(null, true, resAct); }
+                }
+            })
     },
 
     getCurrent: function(callback){
@@ -769,19 +880,26 @@ module.exports = ActivityOperations = {
         })
     },
 
-    createWelcomeActivity: function(userId){
+    createWelcomeActivity: function(userId, userLang, creatorId, title, description, imageUrl, location, isAdmin, callbackDone){
+        var checkedLang = checkLanguage(userLang);
+        var aTitle = title? title: commandDictionary[checkedLang][WELCOME_TITLE],
+            aDesc = description? description : commandDictionary[checkedLang][WELCOME_DESCRIPTION],
+            aImage = imageUrl? imageUrl : WELCOME_URL,
+            aLocation = location? location : WELCOME_LOCATION,
+            aCreator = creatorId? creatorId : NOSOLO_CHAT
+        ;
         async.waterfall([
                 function(callback){
-                    log.info('createWelcomeActivity userId', userId);
+                    log.info('create WelcomeActivity userId', userId);
                     var startTime = new Date();
                     var finishTime = new Date();
                     finishTime.setHours(24);
                     var welcomeActivity = {
-                        title: 'Chat with noSolo',
-                        description: 'Tell us how we can help you',
-                        imageUrl: 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
-                        location: [34.85992, 32.33292],
-                        creator: '198803877117851',//TODO change to noSolo page id 100009647204771
+                        title: aTitle,
+                        description: aDesc,
+                        imageUrl: aImage,
+                        location: aLocation,
+                        creator: aCreator,
                         timeStart: startTime,
                         timeFinish: finishTime,
                         maxMembers: 2,
@@ -794,6 +912,17 @@ module.exports = ActivityOperations = {
                         }
                         else{callback(null, resAct);}
                     });
+                },
+                function(resAct, callback){
+                    Chat.findByIdAndUpdate(resAct._id, { $push: { usersInChat: userId }, $set: { crm: { isSupport: true } } },
+                        { new: true },
+                        function(err, resChat){
+                            if(err){ callback(err); }
+                            else{
+                                console.log('Support Chat created:', resChat);
+                                callback(null, resAct);
+                            }
+                        })
                 },
                 function(resAct, callback){
                     User.findByIdAndUpdate(userId,{ $push: { activitiesJoined: resAct._id } }, {new: true},
@@ -810,11 +939,14 @@ module.exports = ActivityOperations = {
                     })
                 },
                 function( resUser, resAct, callback){
-                    Socket.addToChat(userId, resAct._id);
-                    setTimeout(function(){
-                        //message for joiner not for creator
-                        Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, WELCOME_ACTIVITY_MESSAGE);
-                    }, 2000);
+                    if(!isAdmin){
+                        Socket.addToChat(userId, resAct._id);
+                        setTimeout(function(){
+                            //message for joiner not for creator
+                            var finalMessage = commandDictionary[checkedLang][WELCOME_ACTIVITY_MESSAGE];
+                            Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, finalMessage);
+                        }, 2000);
+                    }
                     callback(null, resAct, resUser)
                 }
 
@@ -822,15 +954,197 @@ module.exports = ActivityOperations = {
         function(err, resAct, resUser){
             if(err){
                 console.error('WELCOME ACTIVITY ERROR: ', err);
+                if(callbackDone){ callbackDone(err); }
             }
             else{
                 log.info('welcome activity created for user: ' + resUser._id);
+                if(callbackDone){ callbackDone(null, resAct); }
             }
 
         });
 
+    },
+
+    removeUserActivities: function(userId, callbackDone){
+        async.waterfall([
+                function(callback){
+                    Activity.find({creator: userId}, function(err, resActs){
+                        if(err){ callback(err); }
+                        else{ callback(null, resActs); }
+                    })
+                },
+                function(resActs, callback){
+                    async.eachSeries(resActs, function(activity, callbackEach){
+                        ActivityOperations.deleteActivity(activity._id, function(err){
+                            if(err){ callbackEach(err); }
+                            else{ callback(null); }
+                        },
+                            function(err){
+                                if(err){ callback(err); }
+                                else{ callback(null); }
+                            }
+                        )
+                    })
+                }
+
+            ],
+            function(err){
+                if(err){
+                    log.error(err);
+                    callbackDone(err);
+                }
+                else{ callbackDone(null); }
+            })
     }
 
 };
 
+//TODO 2 old version of function should change it with todo 1
+/*
+ CHANGED_TIME = ' changed the time of the activity',
+ MULTI_PARAMS_MSG = 'You changed some details in the activity',
+ MULTI_PARAMS_MSG_OTHERS = ' changed some details in the activity\n check it out',
+ CHANGED_LOCATION = 'You changed the location',
+ CHANGED_MAX_MEMBERS_FOR_OTHERS = 'More spots are now available, invite your friends!',
+ CHANGED_MAX_MEMBERS = ' changed the # of participants to ',
+ JOIN_APPROVE_YES = 'You really made sure people would show up for the fun',
+ JOIN_APPROVE_NO = 'You just made it easier for others to join IN',
+ CHANGED_TAGS = 'You re-defined the tags on this one',
+ CHANGED_PRIVATE_NO = 'You changed the visibility of this activity to public, making it available for other noSoloers to join on the fun.',
+ CHANGED_PRIVATE_NO_FOR_OTHERS = 'This activity is now public, increasing the chances of this activity happening!',
+ CHANGED_PRIVATE_YES = ' changed this activity to private invite your friends to join it',
+ CHANGED_DESCRIPTION = 'You described this activity differently ',
+ CHANGE_DESCRIPTION_1 = 'For better or for best, ',
+ CHANGE_DESCRIPTION_2 = ' changed the info on this activity',
+ CHANGED_TITLE = 'You changed the title',
+ NTF_MULTI_MSG = 'some details in activity changed. Check it out',
+ TIME_CHANGED_NTF = 'activity time changed',
+ ACTIVITY_CHANGED_NTF_1 = 'Heads up ',
+ ACTIVITY_CHANGED_NTF_2 = ' changed the location',
+ ACTIVITY_NTF_CREATOR = 'activity location changed',
+ MAX_MEMBERS_NTF = '# of participants changed',
+ YOU = 'You',
+ CHANGE_TITLE_1 = 'if this isn’t spontaneous enough, ',
+ CHANGE_TITLE_2 = ' just renamed the activity',
 
+ NOSOLO_ID = '100009647204771',
+ NOSOLO_NAME = 'noSolo',
+ NOSOLO_CHAT = '198803877117851',
+ WELCOME_MESSAGE = 'Activity successfully created\n Tap on "Info" and invite friends to join IN on the fun!',
+ WELCOME_ACTIVITY_MESSAGE = 'Welcome to noSolo here you can tell us what you want',
+ WELCOME_TITLE = 'Chat with noSolo',
+ WELCOME_DESCRIPTION = 'Tell us how we can help you',
+ WELCOME_URL = 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
+ WELCOME_LOCATION = [34.85992, 32.33292],
+ ActivityOperations = null
+
+function sendUpdateNtf(activity, creatorSurname, changedFields){
+    var message = MULTI_PARAMS_MSG,
+        forEveryBody = true,
+        shouldSend = true,
+        messageForOthers = creatorSurname + MULTI_PARAMS_MSG_OTHERS,
+        notification = null,
+        ntfAddressee = getAddressee(activity);
+    ;
+
+    console.log('IN CHANGE FIELDS:', changedFields[0]);
+
+    switch(changedFields[0]){
+        case 'timeStart':case 'timeFinish': {
+        var iterator = function(user, callbackI){
+            if(user.settings.isSendReminder && user.settings.multipleReminders &&
+                user.settings.multipleReminders.length > 0){
+                common.setMultipleReminder(user, activity, callbackI);
+            }
+            else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
+                common.setReminder(user, activity, callbackI);
+            }
+            else{ callbackI(null); }
+        };
+        common.deleteReminder(activity._id, function(err){
+            if(err){log.error(err);}
+            else{
+                async.waterfall([
+                        function(callback){
+                            User.find({ '_id': {$in: activity.joinedUsers } }, function(err, resUsers){
+                                if(err){ callback(err); }
+                                else{ callback(null, resUsers); }
+                            });
+                        },
+                        function(users, callback){
+                            async.eachSeries(users, iterator, function(err, res){
+                                if(err){ callback(err); }
+                                else{ callback(null); }
+                            })
+                        }
+                    ],
+                    function(err){
+                        if(err){log.error(err); }
+                        else{ log.info('ACTIVITY OPERATIONS ACTIVITY REMINDERS UPDATED'); }
+                    })
+            }
+        });
+        if(changedFields.length <= 2){
+            message = YOU + CHANGED_TIME;
+            messageForOthers = creatorSurname + CHANGED_TIME;
+            notification = TIME_CHANGED_NTF;
+        }
+        else{ notification = NTF_MULTI_MSG; }
+    };break;
+        case 'location': {
+            if(changedFields.length == 1){
+                message = CHANGED_LOCATION;
+                messageForOthers = ACTIVITY_CHANGED_NTF_1 + creatorSurname + ACTIVITY_CHANGED_NTF_2;
+                notification = ACTIVITY_NTF_CREATOR;
+            }
+            else{ notification = NTF_MULTI_MSG; }
+        };break;
+        case 'maxMembers':{
+            if(changedFields.length == 1){
+                var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
+                message =  YOU + CHANGED_MAX_MEMBERS + maxMembers;
+                messageForOthers = creatorSurname + CHANGED_MAX_MEMBERS + maxMembers;
+                notification = MAX_MEMBERS_NTF;
+            }
+            else{ notification = NTF_MULTI_MSG; }
+        };break;
+        case 'isApprovalNeeded':{
+            if(changedFields.length == 1) {
+                if (activity.isApprovalNeeded) { message = JOIN_APPROVE_YES; }
+                else { message = JOIN_APPROVE_NO; }
+            }
+            forEveryBody = false;
+        };break;
+        case 'tags':{
+            if(changedFields.length == 1) { message = CHANGED_TAGS; }
+            forEveryBody = false;
+        };break;
+        case 'isPrivate':{
+            //console.log('IN PRIVATE CASE: ', activity);
+            if(changedFields.length == 1) {
+                if(activity.isPrivate){
+                    message = YOU + CHANGED_PRIVATE_YES;
+                    messageForOthers = creatorSurname + CHANGED_PRIVATE_YES;
+                }
+                else{
+                    message = CHANGED_PRIVATE_NO;
+                    messageForOthers = CHANGED_PRIVATE_NO_FOR_OTHERS;
+                }
+            }
+        };break;
+        case 'description': {
+            if(changedFields.length == 1) {
+                message = CHANGED_DESCRIPTION;
+                messageForOthers = CHANGE_DESCRIPTION_1 + creatorSurname + CHANGE_DESCRIPTION_2;
+            }
+        };break;
+        case 'title':{
+            if(changedFields.length == 1) {
+                message = CHANGED_TITLE;
+                messageForOthers = CHANGE_TITLE_1 + creatorSurname + CHANGE_TITLE_2;
+            }
+        };break;
+
+        default: shouldSend = false; break;
+
+    }*/

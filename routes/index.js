@@ -9,15 +9,16 @@ var log = require('../lib/log.js')(module),
     NotificationOperations = require('../models/notificActions.js'),
     RedisTest = require('../lib/socket.js'),
     NotyMan = require('../models/notificationManager.js'),
-//Socket = require('../lib/socket.js'),
+    Socket = require('../lib/socket.js'),
     async = require('async'),
     s3signing = require('../lib/s3upload.js'),
     common = require('../lib/commonFunctions.js'),
     report = require('../models/reportOperations.js'),
     AppCommands = require('../models/appDictionaryOperations.js'),
-    UserArchive = require('../data/userArchive.js')
+    UserArchive = require('../data/userArchive.js'),
+    ChatBroker = require('../models/chatBroker.js'),
 
-NOT_ENOUGH_FIELDS = 'not enough fields to operation',
+    NOT_ENOUGH_FIELDS = 'not enough fields to operation',
 
     AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY,
     AWS_SECRET_KEY = process.env.AWS_SECRET_KEY,
@@ -86,7 +87,7 @@ function discoverActivity(userId, long, lat, response){
         else{
             var actArray = getNotForFind(foundedUser);
             Activity.searchLocation({ cords:[long, lat],
-                    radius: foundedUser.radius, userId: userId, notFindArray: actArray},
+                    radius: foundedUser.radius, userId: userId, notFindArray: actArray, user: foundedUser },
                 function(err, foundedActivities){
                     if(err){
                         resJson.result = 'error';
@@ -613,31 +614,47 @@ module.exports = function(app){
      */
     app.post('/activity_update', function(request, response){
         //console.log('ACTIVITY FOR UPDATE', request.body);
-        var resJson = {};
-        checkActivityFieldsUpd(request.body, function(err, activityObj){
-            if(!err){
+        async.waterfall([
+            function(callback){
+                checkActivityFieldsUpd(request.body, function(err, activityObj){
+                    if(err){ callback(err); }
+                    else{ callback(null, activityObj) }
+                })
+            },
+            function(activityObj, callback){
                 Activity.universalActivityUpdate(activityObj, function(err, resAct){
-                    if(err){
-                        resJson.result = 'error';
-                        resJson.data = err.message;
+                    if(err){ callback(err); }
+                    else if(resAct == 'activity is not found'){
+                        callback(new Error('activity is not found'));
                     }
-                    else if(resAct == 'activity is not found') {
-                        resJson.result = 'error';
-                        resJson.data = 'activity is not found';
-                    }
-                    else{
-                        resJson.result = 'success';
-                        resJson.data = resAct;
-                    }
-                    response.json(resJson);
-                });
+                    else{ callback(null, resAct); }
+                })
+            },
+            function(resAct, callback){
+                User.getByDiscover(resAct._id, function(err, resUsers){
+                    if(err){ callback(err); }
+                    else{ callback(null, resAct, resUsers); }
+                })
+            },
+            function(resAct, resUsers, callback){
+                var resJson = {
+                    result: 'success',
+                    data: resAct
+                };
+                Socket.sendMyActivityUpdate(resAct._id, resJson, resUsers);
+                callback(null, resJson);
             }
-            else{
+
+        ],function(err, result){
+            var resJson = {};
+            if(err){
                 resJson.result = 'error';
                 resJson.data = err.message;
-                response.json(resJson);
             }
-        })
+            else{ resJson = result; }
+
+            response.json(resJson);
+        });
     });
 
     /**
@@ -755,12 +772,14 @@ module.exports = function(app){
      */
     app.post('/user_join_activity', function(request, response){
         NotificationOperations.joinApprove(null, request.body.userId
-            , request.body.activityId, null, function(err){
+            , request.body.activityId, null, function(err, activity){
                 if(err){
                     log.error(err);
                     response.json({ result: 'error', data: err.message });
                 }
                 else{
+                    Socket.sendMyActivityAdd(request.body.userId, activity);
+                    Socket.sendMyActivityUpdate(activity._id, { result: 'success', data: activity });
                     response.json({ response: 'success', data: null});
                 }
             });
@@ -795,11 +814,12 @@ module.exports = function(app){
                 resJson.result = 'success';
                 resJson.data = result;
             }
+            Socket.sendMyActivityUpdate(result._id, { result: 'success', data: result });
             response.json(resJson);
         });
     });
 
-    /**
+   /* /!**
      * @api {post} /user_removed_from_activity User removed from activity by creator
      * @apiGroup Activity
      * @apiName activity leave
@@ -815,7 +835,7 @@ module.exports = function(app){
      * @apiError {json} result:error
      * @apiError {json} data:err.message
      *
-     */
+     *!/
     app.post('/deleted_member_from_activity', function(request, response){
         Activity.removeUserFromActivity(request.body.activityId, request.body.userId, function(err, resultActivity){
             var resJson = {};
@@ -828,9 +848,10 @@ module.exports = function(app){
                 resJson.result = 'success';
                 resJson.data = resultActivity;
             }
+            Socket.sendMyActivityUpdate(activityObj._id, { result: 'success', data: resultActivity });
             response.json(resJson);
         });
-    });
+    });*/
 
     /**
      * @api {post} /remove_activity Remove Activity
@@ -852,6 +873,7 @@ module.exports = function(app){
                 response.json({result: 'error', data: err.message});
             }
             else{
+                Socket.sendMyActivityDelete(request.body._id, { result: 'success', data: request.body._id });
                 response.json({result: 'success'});
             }
         })
@@ -925,7 +947,7 @@ module.exports = function(app){
      */
     app.post('/like_activity', function(request, response){
         //console.log('IN WANT TO JOIN:', request.body);
-        Activity.checkPlaces(request.body.activityId, function(err, isPlace, title){
+        Activity.checkPlaces(request.body.activityId, function(err, isPlace, resAct){
             if(err){
                 response.json({ result: 'error', data: err.message });
             }
@@ -937,12 +959,13 @@ module.exports = function(app){
                 else{
                     log.info('LIKED ACTIVITY IN PROCESS');
                     NotificationOperations.likeActivity(request.body.userId, request.body.activityId, request.body.creatorId,
-                        request.body.message, request.body.creatorSurname, title, function(err){
+                        request.body.message, request.body.creatorSurname, resAct.title, function(err){
                             if(err){
                                 response.json({ result: 'error', data: err.message });
                             }
                             else{
                                 log.info('LIKE RESPONSE');
+                                Socket.sendMyActivityAdd(request.body.userId, resAct);
                                 response.json({ response: 'success', data: null});
                             }
                         })
@@ -1433,12 +1456,97 @@ module.exports = function(app){
             });
         });
 
+    app.get('/support_chats', function(request, response){
+        var result = {
+            result: 'success',
+            data: []
+        };
+        ChatBroker.getSupportChats(request.query.adminId, function(err, resChats){
+            if(err){
+                log.error(err);
+                result.result = 'error';
+                result.data = err;
+            }
+            else{
+                result.data = resChats
+            }
+            response.json(result);
+        })
+    });
 
+    app.post('/support_chat', function(request, response){
+        ChatBroker.updateSupportChat(request.body.chatId);
+        response.json({result: 'success'});
+    });
 
+    app.post('/admin_chat', function(request, response){
+        async.waterfall([
+                function(callback){
+                    Activity.createWelcomeActivity(request.body.userId,request.body.userLang, request.body.adminId, request.body.title, request.body.description
+                        , request.body.imageUrl, request.body.location, true, function(err, resActivity){
+                            if(err){ callback(err); }
+                            else{ callback(null, resActivity); }
+                        })
+                },
+                function(activity, callback){
+                    ChatBroker.getChat(activity._id, function(err, resChat){
+                        if(err){ callback(err); }
+                        else{ callback(null, activity, resChat) }
+                    })
+                }
+            ],
+            function(err, activity, chat){
+                if(err){
+                    log.error(err);
+                    response.json({
+                        result: 'error',
+                        data: err
+                    })
+                }
+                else{
+                    log.info('Admin chat created:', chat._id);
+                    response.json({
+                        result: 'success',
+                        data: {
+                            activity: activity,
+                            chat: chat
+                        }
+                    })
+                }
+            });
 
-
-
+    })
 };
-
-
+/*
+checkActivityFieldsUpd(request.body, function(err, activityObj){
+    if(!err){
+        Activity.universalActivityUpdate(activityObj, function(err, resAct){
+            if(err){
+                resJson.result = 'error';
+                resJson.data = err.message;
+            }
+            else if(resAct == 'activity is not found') {
+                resJson.result = 'error';
+                resJson.data = 'activity is not found';
+            }
+            else{
+                resJson.result = 'success';
+                resJson.data = resAct;
+                User.getByDiscover(activityObj._id, function(err, resUsers){
+                    if(err){ log.error(err); }
+                    else{ console.log('Users by discover', resUsers) }
+                })
+            }
+            Socket.sendMyActivityUpdate(activityObj._id, resJson);
+            response.json(resJson);
+        });
+    }
+    else{
+        resJson.result = 'error';
+        resJson.data = err.message;
+        Socket.sendMyActivityUpdate(activityObj._id, resJson);
+        response.json(resJson);
+    }
+})
+*/
 

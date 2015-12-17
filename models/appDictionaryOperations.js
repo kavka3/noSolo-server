@@ -7,7 +7,7 @@ var log = require('../lib/log.js')(module),
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
     Dictionary = require('../data/appDictionarySchema.js')
-;
+    ;
 
 
 
@@ -76,5 +76,14 @@ module.exports = {
             if(err){ callback(err); }
             else{ callback(null, resCommand); }
         })
-    }
+    },
+
+    removeAll: function(){
+        Dictionary.remove({}, function(err, res){
+            if(err){ console.error(err); }
+            else{ console.log('ALL COMMANDS REMOVED'); }
+        })
+    },
+
+
 }

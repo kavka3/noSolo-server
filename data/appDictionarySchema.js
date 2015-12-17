@@ -4,8 +4,8 @@
 
 var mongoose = require('../lib/db.js').mongoose,
     connection = require('../lib/db.js').connection,
-    Schema = mongoose.Schema,
-    ObjectId = mongoose.Types.ObjectId
+    Schema = mongoose.Schema/*,
+    ObjectId = mongoose.Types.ObjectId*/
     ;
 
 var appDictionary = {

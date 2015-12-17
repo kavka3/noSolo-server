@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.cookieParser());
-app.use(express.session({
+/*app.use(express.session({
   secret: 'session-secret',
   key: 'sid',
   cookie: {
@@ -43,7 +43,7 @@ app.use(express.session({
   }
 }));
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.session());*/
 //mw for file uploading managment
 app.use(multer({ dest: './uploads/',
   rename: function (fieldname, filename) {
