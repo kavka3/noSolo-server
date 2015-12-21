@@ -157,11 +157,11 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             specialData['joiningActivityTitle'] = resAct.title;
                             /*var sendUser = common.deepObjClone(resUser);
                             sendUser['activityId'] = activityId;*/
-                            var notification =
+                            /*var notification =
                                 Notification({ creator: resAct.creator, addressee: resAct.creator
                                     , notificationType: USER_JOINS_ACTIVITY, specialData: specialData });
                             notification.save(function(err){ if(err)log.error(err.message) });
-                            Socket.notifyToOne(notification);
+                            Socket.notifyToOne(notification);*/
                             var message = resUser.surname + JOINED;
                             var messageForPush = resUser.surname + JOINED + resAct.title;
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
