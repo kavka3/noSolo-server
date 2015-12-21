@@ -396,12 +396,12 @@ module.exports =  NotificationOperations = {
     },
 
     leaveActivity: function(activity, user){
-        var specialData = createSpecialData(user, activity._id);
+       /* var specialData = createSpecialData(user, activity._id);
         specialData['joiningActivityTitle'] = activity.title;
         var notification = Notification({ creator: activity.creator , addressee: activity.creator
             , notificationType: USER_LEAVE_ACTIVITY, specialData: specialData });
         notification.save(function(err){ if(err)log.error(err.message) });
-        Socket.notifyToOne(notification);
+        Socket.notifyToOne(notification);*/
         var message = user.surname + ' left';
         var pushMessage = user.surname + ' left ' + activity.title;
         Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, false, pushMessage);
