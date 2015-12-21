@@ -377,14 +377,14 @@ module.exports = function(app){
         });
     });
 
-    app.post('/delete_user', function(request, response){
+    /*app.post('/delete_user', function(request, response){
         log.info('DELETE USER',request.ip);
         User.deleteUser(request.body._id, function(err, result){
             request.session.destroy(function(){
                 response.redirect('/');
             });
         });
-    });
+    });*/
 
     app.get('/clear_testing_base', function (request, response){
         Base.clearBase(function(text){
