@@ -100,7 +100,7 @@ var userSchema = new Schema({
     }],
     radius:{
         type: Number,
-        default: 2
+        default: 5
     },
     rating: Number,
     ranking: Number,
