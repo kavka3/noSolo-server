@@ -74,6 +74,16 @@ module.exports = {
        })
     },
 
+    getCurrentUser: function(callback){
+        var startSearch = new Date();
+        startSearch.setHours(-96);
+        //console.log('getCurrentUser startSearch', startSearch);
+        User.find({lastVisit:{'$gt': startSearch}, currentLocation: { $exists: true, $ne: [] }}, function(err, resUsers){
+            if(err){ callback(err); }
+            else{ callback(null, resUsers) }
+        })
+    },
+
     signIn: function(userArgs, callbackDone){
         var isSignUp = false;
         async.waterfall([

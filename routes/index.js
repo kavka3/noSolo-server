@@ -1515,6 +1515,18 @@ module.exports = function(app){
                 }
             });
 
+    });
+
+    app.get('/current_users', function(request, response){
+        User.getCurrentUser(function(err, users){
+            if(err){
+                log.error(err);
+                response.json({result: 'error', data: err});
+            }
+            else{
+                response.json({result: 'success', data: users});
+            }
+        })
     })
 };
 /*

@@ -147,10 +147,10 @@ var userSchema = new Schema({
         type: String,
         default: 'https://s3.amazonaws.com/nosoloimages/adefault.png'
     },
-    currentLocation:{
+    /*currentLocation:{
         type: [Number],
         index: '2dsphere'
-    },
+    },*/
     activityJoinedNumber:{
         type:Number,
         default: 0
