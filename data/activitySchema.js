@@ -126,7 +126,10 @@ var activitiesSchema = new Schema({
         type: Number,
         required: true,
         default: 0
-    }]
+    }],
+    fbId: {
+        type: String
+    }
 
 });
 //to define cascade behavior while delete obj
