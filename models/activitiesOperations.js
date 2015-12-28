@@ -887,6 +887,7 @@ module.exports = ActivityOperations = {
         var query = Activity
             .find({})
             .where('timeFinish').gt(Date.now())
+            .where('fbId').exists(false)
             .populate('joinedUsers',
             '_id surname familyName imageUrl currentLocation')
             .populate('creator', '_id surname familyName imageUrl currentLocation')
