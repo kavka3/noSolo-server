@@ -86,7 +86,7 @@ function getAddressee(activity){
     var addrs = common.deepObjClone(activity.joinedUsers);
     var index = addrs.indexOf(activity.creator);
     addrs.splice(index, 1);
-    console.log('IN GET ADDRESSEE: ', addrs);
+    //console.log('IN GET ADDRESSEE: ', addrs);
 
     return addrs;
 };
@@ -105,7 +105,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
         //ntfAddressee = getAddressee(activity);
     ;
 
-    console.log('IN CHANGE FIELDS:', changedFields[0]);
+    //console.log('IN CHANGE FIELDS:', changedFields[0]);
 
     switch(changedFields[0]){
         case 'timeStart':case 'timeFinish': {
@@ -162,7 +162,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                 var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
                 message =  [{ commandId: YOU} , { commandId: CHANGED_MAX_MEMBERS} , { param: maxMembers }];
                 messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_MAX_MEMBERS }, { param: maxMembers }];
-                console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
+                //console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
             }
 
         };break;
@@ -238,7 +238,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                                 var pushMsg = null;
                                 if(messageForPush){
                                     pushMsg = createMessage(user.systemLanguage, messageForPush );
-                                    console.log('Push message', pushMsg);
+                                    //console.log('Push message', pushMsg);
                                 }
                                 Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
                             }
@@ -266,7 +266,7 @@ function checkDictionary(){
             if(err){ log.error(err); }
             else{
                 commandDictionary = resDict;
-                console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
+                //console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
             }
         })
     }
@@ -403,9 +403,11 @@ module.exports = ActivityOperations = {
                 var searchDistance = (requestObj.radius / RADIUS),
                     startSearch = new Date();
                 startSearch.setSeconds(-30);
+                var dateFinish = new Date();
+                dateFinish.setHours(86);
                 var query = Activity
                     .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
-                    .where('timeFinish').gt(Date.now())
+                    .where('timeFinish').gt(Date.now()).lt(dateFinish)
                     //.where('created').lt(startSearch)
                     .where('_id').nin(requestObj.notFindArray)
                     .where('isPrivate').ne(true)
@@ -413,7 +415,7 @@ module.exports = ActivityOperations = {
                     .populate('joinedUsers', JOINED_USERS_FIELDS)
                     .populate('creator', '_id surname familyName imageUrl')
                     //.populate('tags', '_title tagDictionary imageUrl')
-                    .limit(100);
+                    //.limit(100);
                 query.exec(function(err, resActivity){
                     if (err) {
                         log.error(err);
@@ -937,7 +939,7 @@ module.exports = ActivityOperations = {
                         function(err, resChat){
                             if(err){ callback(err); }
                             else{
-                                console.log('Support Chat created:', resChat);
+                                //console.log('Support Chat created:', resChat);
                                 callback(null, resAct);
                             }
                         })
