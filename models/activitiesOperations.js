@@ -887,10 +887,12 @@ module.exports = ActivityOperations = {
 
     getCurrent: function(callback){
         var date = new Date(2015, 11, 27);
+        var arr = ['198803877117851','198803877117851'];
         var query = Activity
             .find({})
             .where('timeStart').gt(date)
             .where('fbId').exists(false)
+            .where('creator').nin(arr)
             .populate('joinedUsers',
             '_id surname familyName imageUrl currentLocation')
             .populate('creator', '_id surname familyName imageUrl currentLocation')
