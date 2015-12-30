@@ -886,9 +886,10 @@ module.exports = ActivityOperations = {
     },
 
     getCurrent: function(callback){
+        var date = new Date(2015, 11, 27);
         var query = Activity
             .find({})
-            .where('timeFinish').gt(Date.now())
+            .where('timeStart').gt(date)
             .where('fbId').exists(false)
             .populate('joinedUsers',
             '_id surname familyName imageUrl currentLocation')
