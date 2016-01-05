@@ -353,13 +353,13 @@ module.exports = function(app){
      */
     app.post('/signIn', function(request, response){
         console.log('USER SIGN IN:', request.body);
-        User.signIn(request.body, function(err, result){
+        User.signIn(request.body, function(err, result, isSignUp){
             if(err){
                 response.json({result: "error", data: err.message});
             }
             else{
                 //request.session.user = result._id;
-                response.json({result: "success", data: result});
+                response.json({result: "success", data: result, isSignUp: isSignUp});
             }
         });
     });
