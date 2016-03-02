@@ -61,6 +61,10 @@ app.use(app.router);
 require('./routes')(app);
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/googlef8692a73a6a70ce3.html', function(req, res){
+   res.sendfile(path.join(__dirname, 'public/googlef8692a73a6a70ce3.html'));
+});
+
 app.use(function(err, req, res, next){
 // development only
   if ('development' == app.get('env'))

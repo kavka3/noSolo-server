@@ -19,23 +19,28 @@ var messageSchema =  new Schema({
         required: true
     },
     messageTime: {
-        type: Date,
-        default: Date.now,
+        type: Number,
+        //default: Date.now,
         required: true
     },
     messageText: {
-        type: String,
-        required: true
+        type: String
     },
     messageType: {
         type: String,
         default: 'text', // or 'picture' or something else...
         required: true
     },
-    imageLink: {
+    imageUrl: {
         type: String
     },
     userName:{
+        type:String
+    },
+    /*tbNlLocalImageUrl:{
+        type:String
+    },*/
+    tbNlImageUrl:{
         type:String
     },
     notForCreator:{

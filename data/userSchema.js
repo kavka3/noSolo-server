@@ -100,7 +100,7 @@ var userSchema = new Schema({
     }],
     radius:{
         type: Number,
-        default: 5
+        default: 2
     },
     rating: Number,
     ranking: Number,
@@ -127,7 +127,7 @@ var userSchema = new Schema({
             'newMessages': true,
             'isSendReminder': true,
             'reminderTime': 1,
-            'multipleReminders': []
+            'multipleReminders': [ ]//{ type: Schema.Types.Mixed }
         }
     },
     uniqueDeviceId: [{
@@ -147,14 +147,25 @@ var userSchema = new Schema({
         type: String,
         default: 'https://s3.amazonaws.com/nosoloimages/adefault.png'
     },
-    /*currentLocation:{
+    currentLocation:{
         type: [Number],
         index: '2dsphere'
-    },*/
+    },
     activityJoinedNumber:{
         type:Number,
         default: 0
+    },
+    fingerPrints: [{
+        type: Schema.Types.Mixed
+    }]
+/*{
+    fingerPrint: {
+        type: String
+    },
+    timeStamp: {
+        type: Date
     }
+}*/
 });
 
 //userSchema.plugin(autoIncrement.plugin, 'NoSoloUser');

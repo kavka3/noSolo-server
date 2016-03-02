@@ -35,7 +35,7 @@ var ChatManager = {
                     else if(common.isEmpty(resChat)){ callback(new Error('Chat is not found')); }
                     else{ callback(null, resChat); }
                 })
-            } ,
+            },
             function(resChat, callback){
                 var messages = resChat.messages;
                 if(!common.isEmpty(messages)){
@@ -50,17 +50,25 @@ var ChatManager = {
                         { $push: { messageBox :{userId: userId, messageId: messages[messages.length - 1]}} }, { upsert: true },
                         function (err, result) {
                             if(err){callback(err); }
-                            else{ callback(null, result); }
+                            else{ callback(null, messages); }
                         }
                     );
                 }
-                else{ callback(null, resChat); }
-
-            }
+                else{ callback(null,null); }
+            },
+            /*function(messages, callback){
+                if(!common.isEmpty(messages)){
+                    Message.find({_id: {'$in': messages}}, function(err, resMessages){
+                        if(err){ callback(err); }
+                        else{ callback(null, resMessages); }
+                    })
+                }
+                else{ callback(null, null); }
+            }*/
         ],
-        function(err, resChat){
+        function(err, messages){
             if(err){callbackDone(err); }
-            else{ /*console.log('CHAT CHANGED: ', resChat);*/ callbackDone(null); }
+            else{ /*console.log('CHAT CHANGED: ', resChat);*/ callbackDone(null, []); }
         })
     },
 
@@ -186,16 +194,27 @@ var ChatManager = {
             messageText: messageForPush
         }
     },
-    createMessage: function(userId, userName, chatId, message, messageId, notForCreator, callback){
-        if(common.isEmpty(userId) || common.isEmpty(userName) || common.isEmpty(chatId) || common.isEmpty(message)){
+    createMessage: function(userId, userName, chatId, message, messageId, notForCreator, messageType, imageUrl, tbNlImageUrl, messageTime, callback){
+        if(common.isEmpty(userId) || common.isEmpty(userName) || common.isEmpty(chatId) || (messageType == 'text' && common.isEmpty(message))){
             callback(new Error(NOT_ENOUGH_FIELDS));
         }
         else{
             var nfc = notForCreator ? notForCreator : { notForCreator : false, activityCreator: null, notForOthers: false, joinedUser: false };
-            console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc )
-            var message = new Message({ _id: messageId, creator: userId, userName: userName, chatId: chatId,
-                messageText: message, notForCreator: nfc });
-            //console.log(message);
+            var time = messageTime? messageTime: new Date().getTime();
+            console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc );
+            var message = new Message({
+                _id: messageId,
+                creator: userId,
+                userName: userName,
+                chatId: chatId,
+                messageText: message,
+                messageTime: time,
+                notForCreator: nfc,
+                messageType: messageType,
+                imageUrl: imageUrl,
+                tbNlImageUrl: tbNlImageUrl
+            });
+            console.log('MESSAGE CREATED',message);
             message.save(function(err){
                 if(err){
                     log.error(err);

@@ -101,6 +101,11 @@ function discoverActivity(userId, long, lat, response){
                     else{
                         resJson.result = 'success';
                         resJson.data = foundedActivities;
+                        //test show first feature
+                       /* if(!common.isEmpty(foundedActivities) && foundedActivities.length > 5){
+                            console.log('showFirstId title', foundedActivities[6]['title']);
+                            resJson['showFirstId'] = foundedActivities[6]['_id'];
+                        }*/
                         response.json(resJson);
                     }
                 });
@@ -173,14 +178,16 @@ function checkActivityFields(obj){
             delete resObj.tagsByLanguage;
         //}
         //else if(!common.isEmpty(resObj.tags)){
-            var arr = [];
+        var tagsByLang = [];
+        var arr = [];
+        if(!common.isEmpty(obj.tags)){
             for(var i = 0; i < obj.tags.length; i++){
-                if(obj.tags[i]['_title'] != undefined){
-                    arr.push(obj.tags[i]['_title']);
+                    if(obj.tags[i]['_title'] != undefined){
+                        arr.push(obj.tags[i]['_title']);
+                    }
                 }
-            }
             if(!common.isEmpty(arr)){ resObj.tags = arr; }
-            var tagsByLang = [];
+
             for(var i = 0; i < obj.tags.length; i++){
                 if(obj.tags[i]['name']){
                     var tagObj = {};
@@ -194,9 +201,9 @@ function checkActivityFields(obj){
                     obj.tags[i]['_title']
                 }
             }
-            resObj['tagsByLanguage'] = tagsByLang;
-            resObj['tags'] = arr;
-
+        }
+        resObj['tagsByLanguage'] = tagsByLang;
+        resObj['tags'] = arr;
         //}
         return resObj;
     }
@@ -207,39 +214,10 @@ function checkActivityFieldsUpd(obj, callbackDone){
         || common.isEmpty(obj.timeFinish) || common.isEmpty(obj.timeStart)){
         callbackDone(new Error('not enough fields'));
     }*/
-    var checkFiegs = checkIfEmpty(obj);
-    if(checkFiegs.result == 'error'){ callbackDone(new Error(checkFiegs.absent)); }
+    var checkFields = checkIfEmpty(obj);
+    if(checkFields.result == 'error'){ callbackDone(new Error(checkFields.absent)); }
     else{
-        //console.log('IN UPDATE: ', obj);
-        var resObj = common.deepObjClone(obj);
-        resObj.creator = obj.creator._id;
-        resObj['creatorName'] = obj.creator.surname;
-        if(resObj.tags && resObj.tags.length == 0){
-            console.log('DELETE TAGS');
-            delete resObj.tags;
-            delete resObj.tagsByLanguage;
-            delete resObj.joinedUsers;
-        }
-        else if(!common.isEmpty(resObj.tags)){
-            var arr = [];
-            for(var i = 0; i < obj.tags.length; i++){
-                if(obj.tags[i]._title != undefined){
-                    arr.push(obj.tags[i]._title);
-                }
-            }
-            resObj.tagsByLanguage = obj.tags;
-            if(!common.isEmpty(arr)){ resObj.tags = arr; }
-            var tagsByLang = [];
-            for(var i = 0; i < obj.tags.length; i++){
-                var tagObj = {};
-                tagObj['name'] = obj.tags[i]['name'];
-                tagObj['imageUrl'] = obj.tags[i]['imageUrl'];
-                tagObj['tagCategory'] = obj.tags[i]['tagCategory'];
-                tagObj['_title'] = obj.tags[i]['_title'];
-                tagsByLang.push(tagObj);
-            }
-            resObj.tagsByLanguage = tagsByLang;
-        }
+        var resObj = Activity.prepareToUpdate(obj);
         Activity.findActivity(obj._id, function(err, oldAct){
             if(err){
                 log.error(err);
@@ -267,6 +245,57 @@ function checkDeviceIdFields(deviceIdObj){
     else{ return false; }
 };
 
+function updateActivity(activityToUpdate, response, callbackDone){
+    //console.log('ACTIVITY FOR UPDATE', request.body);
+    async.waterfall([
+        function(callback){
+            checkActivityFieldsUpd(activityToUpdate, function(err, activityObj){
+                if(err){ callback(err); }
+                else{ callback(null, activityObj) }
+            })
+        },
+        function(activityObj, callback){
+            Activity.universalActivityUpdate(activityObj, function(err, resAct){
+                if(err){ callback(err); }
+                else if(resAct == 'activity is not found'){
+                    callback(new Error('activity is not found'));
+                }
+                else{
+                    console.log("updateActivity", resAct);
+                    callback(null, resAct);
+                }
+            })
+        },
+        /* function(resAct, callback){
+         User.getByDiscover(resAct._id, function(err, resUsers){
+         if(err){ callback(err); }
+         else{ callback(null, resAct, resUsers); }
+         })
+         },*/
+        function(resAct, /*resUsers,*/ callback){
+            var resJson = {
+                result: 'success',
+                data: resAct
+            };
+            Socket.sendMyActivityUpdate(resAct._id, resJson/*, resUsers*/);
+            callback(null, resJson);
+        }
+
+    ],function(err, result){
+        var resJson = {};
+        if(err){
+            resJson.result = 'error';
+            resJson.data = err.message;
+            callbackDone(err);
+        }
+        else{
+            resJson = result;
+            callbackDone(null, result.data );
+        }
+
+        response.json(resJson);
+    });
+}
 
 module.exports = function(app){
 
@@ -377,14 +406,14 @@ module.exports = function(app){
         });
     });
 
-    /*app.post('/delete_user', function(request, response){
+    app.post('/delete_user', function(request, response){
         log.info('DELETE USER',request.ip);
         User.deleteUser(request.body._id, function(err, result){
             request.session.destroy(function(){
                 response.redirect('/');
             });
         });
-    });*/
+    });
 
     app.get('/clear_testing_base', function (request, response){
         Base.clearBase(function(text){
@@ -482,8 +511,8 @@ module.exports = function(app){
      *
      */
     app.post('/create_activity', function(request, response){
-        log.info('IN CREATE ACTIVTITY ROUTE:');
-        console.log(request.body);
+        //log.info('IN CREATE ACTIVTITY ROUTE:');
+        //console.log(request.body);
         var resJson = {};
         var activityObj = checkActivityFields(request.body);
         if(activityObj.result != 'error'){
@@ -613,47 +642,9 @@ module.exports = function(app){
      *
      */
     app.post('/activity_update', function(request, response){
-        //console.log('ACTIVITY FOR UPDATE', request.body);
-        async.waterfall([
-            function(callback){
-                checkActivityFieldsUpd(request.body, function(err, activityObj){
-                    if(err){ callback(err); }
-                    else{ callback(null, activityObj) }
-                })
-            },
-            function(activityObj, callback){
-                Activity.universalActivityUpdate(activityObj, function(err, resAct){
-                    if(err){ callback(err); }
-                    else if(resAct == 'activity is not found'){
-                        callback(new Error('activity is not found'));
-                    }
-                    else{ callback(null, resAct); }
-                })
-            },
-            function(resAct, callback){
-                User.getByDiscover(resAct._id, function(err, resUsers){
-                    if(err){ callback(err); }
-                    else{ callback(null, resAct, resUsers); }
-                })
-            },
-            function(resAct, resUsers, callback){
-                var resJson = {
-                    result: 'success',
-                    data: resAct
-                };
-                Socket.sendMyActivityUpdate(resAct._id, resJson, resUsers);
-                callback(null, resJson);
-            }
-
-        ],function(err, result){
-            var resJson = {};
-            if(err){
-                resJson.result = 'error';
-                resJson.data = err.message;
-            }
-            else{ resJson = result; }
-
-            response.json(resJson);
+        updateActivity(request.body, response, function(err, result){
+            if(err){ log.error(err); }
+            //empty here need it for update with recurring
         });
     });
 
@@ -778,8 +769,11 @@ module.exports = function(app){
                     response.json({ result: 'error', data: err.message });
                 }
                 else{
-                    Socket.sendMyActivityAdd(request.body.userId, activity);
-                    Socket.sendMyActivityUpdate(activity._id, { result: 'success', data: activity });
+                    if(!common.isEmpty(activity)){
+                        Socket.sendMyActivityAdd(request.body.userId, activity);
+                        Socket.sendMyActivityUpdate(activity._id, { result: 'success', data: activity });
+                    }
+                    console.log('user_join_activity: success', activity);
                     response.json({ response: 'success', data: null});
                 }
             });
@@ -803,7 +797,7 @@ module.exports = function(app){
      *
      */
     app.post('/user_leave_activity', function(request, response){
-        Activity.removeUserFromActivity(request.body.activityId, request.body.userId, function(err, result){
+        Activity.removeUserFromActivity(request.body.activityId, request.body.userId, false, function(err, result){
             var resJson = {};
             if(err){
                 log.error(err.message);
@@ -819,7 +813,7 @@ module.exports = function(app){
         });
     });
 
-   /* /!**
+    /**
      * @api {post} /user_removed_from_activity User removed from activity by creator
      * @apiGroup Activity
      * @apiName activity leave
@@ -835,9 +829,9 @@ module.exports = function(app){
      * @apiError {json} result:error
      * @apiError {json} data:err.message
      *
-     *!/
-    app.post('/deleted_member_from_activity', function(request, response){
-        Activity.removeUserFromActivity(request.body.activityId, request.body.userId, function(err, resultActivity){
+     */
+    app.post('/delete_member_from_activity', function(request, response){
+        Activity.removeUserFromActivity(request.body.activityId, request.body.userId, true, function(err, resultActivity){
             var resJson = {};
             if(err){
                 log.error(err.message);
@@ -848,10 +842,10 @@ module.exports = function(app){
                 resJson.result = 'success';
                 resJson.data = resultActivity;
             }
-            Socket.sendMyActivityUpdate(activityObj._id, { result: 'success', data: resultActivity });
+            Socket.sendMyActivityUpdate(resultActivity._id, { result: 'success', data: resultActivity });
             response.json(resJson);
         });
-    });*/
+    });
 
     /**
      * @api {post} /remove_activity Remove Activity
@@ -1047,7 +1041,7 @@ module.exports = function(app){
             })
     });
 
-    /**
+    /** OLD VERSION WE ARE NOT USE IT NOW
      * @api {post} /activity_recur Recur activity
      * @apiGroup Activity
      * @apiName recur activity
@@ -1160,13 +1154,35 @@ module.exports = function(app){
         })
     });
 
+    app.post('/invite', function(request, response){
+        var isSingle = 1;
+        var inviteType = request.body.socialType? request.body.socialType: null;
+        if(request.body.isSingle){
+            //console.log('IS Single: ', request.body.isSingle);
+            isSingle = request.body.isSingle;
+        }
+        //var stab = 'here will be a pretty smart new message to invite your friends in the activity ';
+        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId, isSingle, inviteType,
+            function(err, resLink, resMessage){
+                if(err){ log.error(err); response.json({result: 'error', data: err.message }); }
+                else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }
+            })
+    });
+
+    app.post('/testInviteTime', function(req, res){
+        Activity.testGetTimeString("2016-03-01T20:00:00.000Z", function(err, res){
+            res.send();
+        })
+    })
+
+    //old version till 04.02.2016
     app.post('//invite', function(request, response){
         var isSingle = 1;
         if(request.body.isSingle){
             console.log('IS Single: ', request.body.isSingle);
             isSingle = request.body.isSingle;
         }
-        Activity.inviteToActivity(request.body.creator, request.body.activityId, isSingle,
+        Activity.inviteToActivityOld(request.body.creator, request.body.activityId, isSingle,
             function(err, inviteId){
                 if(err){ log.error(err); response.json({result: 'error', data: error.message }); }
                 else{ response.json({ result: 'success', data: inviteId }); }
@@ -1202,6 +1218,18 @@ module.exports = function(app){
                 } );
         //}
         //else{ response.send({result: 'error', data: 'Not enough fields for report' }); }
+    });
+
+    app.post('/minifyLink', function(request, response){
+        var shortener = require('../lib/urlShorter.js');
+        if(request.body.link != null){
+            shortener.minimizeUrl(request.body.link, function(err, resLink){
+                if(err){ response.json({ result: "error", data: err }) }
+                else{ response.json({ result: "success", data: resLink }) }
+            })
+        }
+        else{ response.json({ result: "error", data: "no link in request" }) }
+
     });
 
     /*app.post('/riseInvite', function(request, response){
@@ -1267,8 +1295,6 @@ module.exports = function(app){
                                     for(var i = 0; i < user[0].activitiesLiked.length; i++){
                                         activitiesPending.push(user[0].activitiesLiked[i]['activityId']);
                                     }
-                                    //console.log('Activities Pending:', activitiesPending);
-                                    //console.log('Activities joined:', activitiesJoined);
                                     var allActs = common.union(activitiesPending, activitiesJoined);
                                     //console.log('Activities total:', allActs);
                                     callback(null, allActs);
@@ -1517,16 +1543,74 @@ module.exports = function(app){
 
     });
 
-    app.get('/current_users', function(request, response){
-        User.getCurrentUser(function(err, users){
-            if(err){
-                log.error(err);
-                response.json({result: 'error', data: err});
-            }
-            else{
-                response.json({result: 'success', data: users});
-            }
-        })
+    app.post('/republish_activity', function(request, response){
+        var isEmpty = checkIfEmpty(request.body);
+        if(isEmpty.result != 'success'){
+            response.json(isEmpty);
+        }
+        else{
+            Activity.republish(request.body, function(err, updatedAct){
+                if(err){ response.json({ result: 'error', data: err }); }
+                else{ response.json({ result: 'success', data: updatedAct }); }
+            })
+        }
+    })
+
+    //new version 02.07.2016
+    app.post('/recurrent', function(request, response){
+        var resJson = {};
+        var activityObj = checkActivityFields(request.body.activity);
+        if(activityObj.result != 'error'){
+            Activity.recurrent(activityObj, request.body.days , function(err, resAct){
+                if(err){
+                    resJson.result = 'error';
+                    resJson.data = err.message;//may be damaged from tagsOperations 28
+                }
+                else{
+                    resJson.result = 'success';
+                    resJson.data = resAct;
+                }
+                //log.info('Recurring activity: ' + resAct._id);
+                response.json(resJson);
+            });
+        }
+        else{
+            resJson.result = 'error';
+            resJson.data = activityObj.absent;
+            response.json(resJson);
+        }
+    });
+
+    app.post('/edit_recur', function(request, response){
+        updateActivity(request.body.activity, response, function(err, updatedAct){
+            if(err){ log.error(err); }
+            else{ Activity.recurrentWithEdit(updatedAct, request.body.days) }
+        });
+    });
+
+    app.post('/leave_once', function(request, response){
+        var resJsn = {
+            result: 'error',
+            data: null
+        };
+        if(!request.body.userId || !request.body.activityId ){
+            resJsn.data = 'not Enough fields';
+            response.json(resJsn);
+        }
+        else{
+            Activity.leaveOnce(request.body.userId, request.body.activityId, function(err, resAct){
+                if(err){
+                    log.error(err);
+                    resJsn.data = err;
+                }
+                else{
+                    resJsn.result = 'success';
+                    resJsn.data = resAct;
+                    Socket.sendMyActivityUpdate(resAct._id, resJsn);
+                }
+                response.json(resJsn);
+            })
+        }
     })
 };
 /*

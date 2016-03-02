@@ -89,28 +89,16 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                 }
             },
             function(resAct, callback){
-                if(isRecur) {
-                    var recurUsers = changeRecurStatus(resAct.recurUsers, userId, JOINED);
-                    Activity.findByIdAndUpdate(resAct._id,
-                        {$set: {recurUsers: recurUsers}, $push: {joinedUsers: userId}},
-                        {new: true, upsert: true}, function (err, changedAct) {
-                            if (err) {
-                                callback(err)
-                            }
-                            else {
-                                console.log('IN ADD TO CHAT: ',userId);
-                                Socket.addToChat(userId, resAct._id);
-                                callback(null, changedAct)
-                            }
-                        });
-                }
-                else{
-                    log.info('notificActions IN ADD USER TO ACTIVITY');
+                    //log.info('notificActions IN ADD USER TO ACTIVITY');
                     Activity.findOneAndUpdate({ _id: resAct._id },
-                        {$push: {joinedUsers: userId}},
-                        {new: true, upsert: true, runValidators: true})
+                        {
+                            $push: { joinedUsers: userId },
+                            $pull: { followingUsers: userId }
+                        },
+                        {new: true}) //, upsert: true, runValidators: true
                         .populate('creator', CREATOR_FIELDS)
                         .populate('joinedUsers', JOINED_USERS_FIELDS)
+                        .populate('followingUsers', JOINED_USERS_FIELDS)
                         .exec(function (err, changedAct) {
                             if (err) {
                                 callback(err)
@@ -119,24 +107,23 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                 if(changedAct.joinedUsers.length > changedAct.maxMembers){
                                     Activity.findOneAndUpdate({ _id: resAct._id },
                                         {$pull: {joinedUsers: userId}},
-                                        {upsert: true}, function (err, changedAct) {
+                                        {upsert: true}, function (err, canceledUpdate) {
                                             if(err){
-                                                log.error('notificActions IN Remove USER FROM ACTIVITY: Cant update activity ', changedAct._id);
+                                                log.error('notificActions IN Remove USER FROM ACTIVITY: Cant update activity ', canceledUpdate._id);
                                                 callback(err);
                                             }
                                             else{callback(new Error('no spots left')); }
                                         })
                                 }
                                 else{
-                                    console.log('IN ADD TO CHAT: ',userId);
+                                    console.log('USER ADDED TO ACTIVITY ', changedAct.title);
                                     Socket.addToChat(userId, resAct._id);
                                     callback(null, changedAct);
 
                                 }
                             }
-                        })
-                    ;
-                }
+                        });
+
                 /*resAct.joinedUsers.push(userId);
                 if(isRecur){ resAct.recurUsers = changeRecurStatus(resAct.recurUsers, userId, JOINED); }
                 Socket.addToChat(userId, resAct._id);
@@ -166,10 +153,10 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                             var messageForPush = resUser.surname + JOINED + resAct.title;
                             //Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, false);
                             Socket.sendNewMember(NOSOLO_ID, NOSOLO_NAME, resAct._id, message, resUser._id, messageForPush);
-                            setTimeout(function(){
+                            /*setTimeout(function(){
                                 //message for joiner not for creator
                                 Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, activityId, 'You joined.');
-                            }, 2000);
+                            }, 2000);*/
                             callback(null, resAct, resUser);
 
                         }
@@ -183,7 +170,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                 else if(resUser.settings.isSendReminder && resUser.settings.reminderTime > 0){
                     common.setReminder(resUser, resAct, callback);
                 }
-                else{ callback(null); }
+                else{ callback(null, resAct); }
             }
         ],
         function(err, resAct){
@@ -366,11 +353,11 @@ module.exports =  NotificationOperations = {
         })
     },
 
-    messageToRemoved: function(userId, activityId, callbackRes){
+    messageToRemoved: function(userId, activityTitle/*, callbackRes*/){
         async.waterfall([
                 function(callback){
                     var newNotify = Notification({ creator: 'NoSolo' , addressee: userId
-                        , notificationType: REMOVED_FROM_ACTIVITY, specialData: {activityId: activityId} });
+                        , notificationType: REMOVED_FROM_ACTIVITY, specialData: activityTitle });
                     newNotify.save(function(err){
                         if(err){callback(err);}
                         else{callback(null, newNotify);}
@@ -386,17 +373,18 @@ module.exports =  NotificationOperations = {
             function(err){
                 if(err){
                     log.error(err.message);
-                    callbackRes(err);
+                    /*callbackRes(err);*/
                 }
                 else{
-                    callbackRes(null);
+                    log.info('message to removed sent');
+                    /*callbackRes(null);*/
                 }
             })
 
     },
 
     leaveActivity: function(activity, user){
-       /* var specialData = createSpecialData(user, activity._id);
+      /*  var specialData = createSpecialData(user, activity._id);
         specialData['joiningActivityTitle'] = activity.title;
         var notification = Notification({ creator: activity.creator , addressee: activity.creator
             , notificationType: USER_LEAVE_ACTIVITY, specialData: specialData });

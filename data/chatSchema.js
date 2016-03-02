@@ -12,11 +12,7 @@ var chatSchema = new Schema({
             ref: 'NoSoloMessage'
         }],
         messageBox: [{//userId & last messageId
-            userId: {
-                type: String,
-                unique: true
-            },
-            messageId: String
+            type: Schema.Types.Mixed
         }],
         chatStatus: {
             type: Boolean,
@@ -53,4 +49,11 @@ var chatSchema = new Schema({
 );
 
 module.exports = connection.model('NoSoloChat', chatSchema);
+
+
+/* new version
+messageBox: {
+    type: Schema.Types.ObjectId,
+        ref: 'ChatMessageBox'
+},*/
 

@@ -53,7 +53,7 @@ module.exports = {
                         callbackDone(err);
                     }
                     else{
-                        log.info('SOCKET My Activities: ', activities);
+                        //log.info('SOCKET My Activities: ', activities);
                         //console.log(activities);
                         callbackDone(null, activities);
                     }

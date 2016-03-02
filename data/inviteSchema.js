@@ -44,7 +44,11 @@ var invite = new Schema({
     comeByLink:{
         type: Number,
         default: 0
-    }
+    },
+    inviteType: {
+        type: String
+    },
+    usedByUsers: [ { type: Schema.Types.Mixed } ]
 
 });
 

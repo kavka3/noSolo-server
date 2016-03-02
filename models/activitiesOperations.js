@@ -1,18 +1,20 @@
 var log = require('../lib/log.js')(module),
     async = require('async'),
     common = require('../lib/commonFunctions.js'),
-    Chat = require('./../data/chatSchema.js'),
-    Activity = require('./../data/activitySchema.js'),
-    User = require('./../data/userSchema.js'),
+    Chat = require('../data/chatSchema.js'),
+    Activity = require('../data/activitySchema.js'),
+    User = require('../data/userSchema.js'),
     Tag = require('./tagsOperations.js'),
     Socket = require('../lib/socket.js'),
     Notify = require('./notificActions.js'),
-    Invite = require('./../data/inviteSchema.js'),
+    Invite = require('../data/inviteSchema.js'),
     mongoose = require('mongoose'),
     commandDictionary = require('./serverDictionaryOperations.js').dictionary,
     checkLanguage = require('./serverDictionaryOperations.js').checkLanguage,
     createMessage = require('./serverDictionaryOperations.js').createMessage,
-
+    urlShorter = require('../lib/urlShorter.js'),
+    RepublishArchive = require('../data/republishArchive.js'),
+    ActivityOperations = null,
 
     RADIUS = 6371,//earth radius in km
     CHAT_CLOSED = 'chat is closed by activity creator',
@@ -51,6 +53,17 @@ var log = require('../lib/log.js')(module),
     FROM = 39,
     TO = 40,
 
+    TODAY = 41,
+    STARTED = 42,
+    TOMORROW = 43,
+    //see common functions to continue
+    AT = 51,
+    ON = 52,
+    GOING = 53,
+    AM = 54,
+    PM = 55,
+    WHITESPACE = ' ',
+
     NOSOLO_ID = '100009647204771',
     NOSOLO_NAME = 'noSolo',
     NOSOLO_CHAT = '198803877117851',
@@ -59,8 +72,7 @@ var log = require('../lib/log.js')(module),
     WELCOME_TITLE = 32,
     WELCOME_DESCRIPTION = 33,
     WELCOME_URL = 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
-    WELCOME_LOCATION = [34.85992, 32.33292],
-    ActivityOperations = null
+    WELCOME_LOCATION = [34.85992, 32.33292]
     ;
 
 function calculateDistance(cords1, cords2){
@@ -86,7 +98,7 @@ function getAddressee(activity){
     var addrs = common.deepObjClone(activity.joinedUsers);
     var index = addrs.indexOf(activity.creator);
     addrs.splice(index, 1);
-    //console.log('IN GET ADDRESSEE: ', addrs);
+    console.log('IN GET ADDRESSEE: ', addrs);
 
     return addrs;
 };
@@ -105,7 +117,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
         //ntfAddressee = getAddressee(activity);
     ;
 
-    //console.log('IN CHANGE FIELDS:', changedFields[0]);
+    console.log('IN CHANGE FIELDS:', changedFields[0]);
 
     switch(changedFields[0]){
         case 'timeStart':case 'timeFinish': {
@@ -238,7 +250,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                                 var pushMsg = null;
                                 if(messageForPush){
                                     pushMsg = createMessage(user.systemLanguage, messageForPush );
-                                    //console.log('Push message', pushMsg);
+                                    console.log('Push message', pushMsg);
                                 }
                                 Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
                             }
@@ -266,15 +278,179 @@ function checkDictionary(){
             if(err){ log.error(err); }
             else{
                 commandDictionary = resDict;
-                //console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
+                console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
             }
         })
     }
 }
 
+function getJoiners(users){
+    var result = [];
+    if(!common.isEmpty(users)){
+        users.forEach(function(user){
+            if(user){ result.push(user._id); }
+        })
+    }
+  return result;
+};
+
+function getTimeComponents(time){
+    //console.log('timeParams init', time);
+    var timeParams = null;
+    var day = null;
+    var date = null;
+
+    var timeDif = common.getTimeDifference(time);
+    var difference = timeDif.daysDiff;
+    var isSameWeek = timeDif.isSameWeek;
+    var hours = timeDif.hours;
+    var minutes = timeDif.minutes;
+    var weekDay = timeDif.weekDay;
+    var formattedDate = timeDif.formattedDate;
+
+    if(difference < 0){ day = STARTED; }
+    else if(difference == 0){ day = TODAY; }
+    else if(difference < 2 ){ day = TOMORROW }
+    else if(isSameWeek){ day = weekDay; }
+    else{ date = formattedDate; }
+
+    if(day && difference >= 0){
+        timeParams = [{ commandId: day }, { commandId: AT }, { param: hours }, { param: ':' }, { param: minutes }];
+    }
+    else if(day && difference < 0){
+        timeParams = [{ commandId: day }];
+    }
+    else if(date){
+        timeParams = [{ commandId: ON }, { param: date }, { commandId: AT },
+            { param: hours }, { param: ':' }, { param: minutes }];
+    }
+    //console.log('timeParams result', timeParams);
+    return timeParams;
+};
+
+//console.log(getTimeComponents('2016-02-13T12:00:00.189Z'));
+
+function createInviteMessage(userId, activityId, callbackDone){
+    async.waterfall([
+        //check user language
+        function(callback){
+            User.findById(userId, 'systemLanguage', function(err, resUser){
+                if(err){ callback(err); }
+                else if(!common.isEmpty(resUser)){ callback(null, resUser.systemLanguage); }
+                else{ callback(new Error('user not found')); }
+            })
+        },
+        //find activity
+        function(userLang, callback){
+            Activity.findById(activityId, function(err, resActivity){
+                if(err){ callback(err); }
+                else if(!common.isEmpty(resActivity)){ callback(null, userLang, resActivity); }
+                else{ callback(new Error('activity not found')) }
+            })
+        },
+        //create message
+        function(userLang, resActivity, callback){
+            var messageComponents = [
+                {commandId: GOING},
+                {param: resActivity.title}
+            ];
+            var timeComponents = getTimeComponents(resActivity.timeStart);
+            var resMessageParams = messageComponents.concat(timeComponents);
+            resMessageParams.push({ param: WHITESPACE });
+            var resMessage = createMessage(userLang, resMessageParams);
+            callback(null, resMessage);
+        }
+    ],
+    function(err, resMessage){
+        if(err){ callbackDone(err); }
+        else{ callbackDone(null, resMessage); }
+    })
+
+};
+
+/*createInviteMessage('1037091919658646', '56baf03fdf4def0300af95d1', function(err, res){
+    if(err){ console.error(err); }
+    else{ console.log(res); }
+});*/
+
+function recurActs(activity, daysToRepeat){
+    var recurringIterator = function(day, callback){
+            //console.log('recurringIterator', day, activity);
+            var start = new Date(activity.timeStart);
+            var activityDay = start.getDay();
+            if(day != null && day != undefined && day != activityDay){
+                var dayDif = day > activityDay? day - activityDay: 7 - activityDay + day;
+                var startTime = new Date(activity.timeStart);
+                var finishTime = new Date(activity.timeFinish);
+                startTime.setHours(startTime.getHours() + 24*dayDif);
+                finishTime.setHours(finishTime.getHours() + 24*dayDif);
+
+                var recurAct = common.deepObjClone(activity);
+                delete recurAct._id;
+                recurAct.parentActivity = activity._id;
+                recurAct.timeStart = startTime;
+                recurAct.timeFinish = finishTime;
+
+                ActivityOperations.createActivity(recurAct, false, function(err, resAct){
+                    if(err){
+                        console.error(err);
+                        callback(err);
+                    }
+                    else{
+                        console.log('recur complete!');
+                        Socket.sendMyActivityAdd(resAct.creator, resAct);
+                        callback(null);
+                    }
+                })
+            }
+        else{ callback(null); }
+    };
+
+    async.eachSeries(daysToRepeat, recurringIterator,
+        function(err, res){
+            if(err){ console.error(err); }
+            else{ console.log('all recur complete') }
+        });
+};
+
 checkDictionary();
 
 module.exports = ActivityOperations = {
+
+    testGetTimeString: getTimeComponents,
+
+    prepareToUpdate: function(obj){
+        var resObj = common.deepObjClone(obj);
+        resObj.creator = obj.creator._id;
+        resObj['creatorName'] = obj.creator.surname;
+        if(resObj.tags && resObj.tags.length == 0){
+            //console.log('DELETE TAGS');
+            delete resObj.tags;
+            delete resObj.tagsByLanguage;
+            delete resObj.joinedUsers;
+        }
+        else if(!common.isEmpty(resObj.tags)){
+            var arr = [];
+            for(var i = 0; i < obj.tags.length; i++){
+                if(obj.tags[i]._title != undefined){
+                    arr.push(obj.tags[i]._title);
+                }
+            }
+            resObj.tagsByLanguage = obj.tags;
+            if(!common.isEmpty(arr)){ resObj.tags = arr; }
+            var tagsByLang = [];
+            for(var i = 0; i < obj.tags.length; i++){
+                var tagObj = {};
+                tagObj['name'] = obj.tags[i]['name'];
+                tagObj['imageUrl'] = obj.tags[i]['imageUrl'];
+                tagObj['tagCategory'] = obj.tags[i]['tagCategory'];
+                tagObj['_title'] = obj.tags[i]['_title'];
+                tagsByLang.push(tagObj);
+            }
+            resObj.tagsByLanguage = tagsByLang;
+        }
+        return resObj;
+    },
 
     //search activities that user wants to join
     getPending: function(actIds, userId, callback){
@@ -282,6 +458,7 @@ module.exports = ActivityOperations = {
             .find({ '_id': { $in: actIds } })
             .populate('joinedUsers', JOINED_USERS_FIELDS)
             .populate('creator', CREATOR_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS)
         ;
             //.limit(100);
         query.exec(function(err, resActivity){
@@ -299,8 +476,9 @@ module.exports = ActivityOperations = {
                 var now = time.getTime();
                 for(; i < length; i++){
                     var index = resActivity[i]['joinedUsers'].filter(function(uObj){
-                        //console.log("IN INDEX: ", uId, userId);
-                        return uObj._id == userId;
+                        if(uObj){ return uObj._id == userId; }
+                        else{ return false; }
+
                     });
                     //console.log('INDEX: ', index, resActivity[i].title);
                     var TF = new Date(resActivity[i]['timeFinish']);
@@ -324,9 +502,10 @@ module.exports = ActivityOperations = {
         var query = Activity
             .find(searchObj)
             .populate('joinedUsers', JOINED_USERS_FIELDS)
-            .populate('creator', '_id surname familyName imageUrl')
+            .populate('creator', CREATOR_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS);
             //.populate('tags', '_title tagDictionary imageUrl')
-            .limit(100);
+            //.limit(100);
         query.exec(function(err, resActivity){
             if (err){
                 log.error(err);
@@ -359,6 +538,7 @@ module.exports = ActivityOperations = {
         Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true})
             .populate('creator', CREATOR_FIELDS)
             .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS)
             .exec(function(err, resAct){
                 if (err) {
                     log.error(err);
@@ -401,19 +581,22 @@ module.exports = ActivityOperations = {
         async.waterfall([
             function(callback){
                 var searchDistance = (requestObj.radius / RADIUS),
-                    startSearch = new Date();
-                startSearch.setSeconds(-30);
-                var dateFinish = new Date();
-                dateFinish.setHours(86);
+                    startLimit = new Date();
+                //console.log('searchLocation dateFinish before', startLimit);
+                startLimit.setHours(startLimit.getHours() + 72);
+                //console.log('searchLocation dateFinish', startLimit);
+
                 var query = Activity
-                    .find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
-                    .where('timeFinish').gt(Date.now()).lt(dateFinish)
-                    //.where('created').lt(startSearch)
+                    .find({
+                        location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }
+                    })
+                    .where('timeFinish').gt(Date.now())
+                    .where('timeStart').lt(startLimit)
                     .where('_id').nin(requestObj.notFindArray)
                     .where('isPrivate').ne(true)
-                    //.where('joinedUsers').size(4)
                     .populate('joinedUsers', JOINED_USERS_FIELDS)
-                    .populate('creator', '_id surname familyName imageUrl')
+                    .populate('creator', CREATOR_FIELDS)
+                    .populate('followingUsers', JOINED_USERS_FIELDS)
                     //.populate('tags', '_title tagDictionary imageUrl')
                     //.limit(100);
                 query.exec(function(err, resActivity){
@@ -428,7 +611,11 @@ module.exports = ActivityOperations = {
                     else {
                         var i = 0, length = resActivity.length, actArr = [];
                         for(; i < length; i++){
-                            if(resActivity[i].joinedUsers.length < resActivity[i].maxMembers){
+                            var finish = new Date(resActivity[i]['timeFinish']);
+                            var searchBorder = new Date();
+                            searchBorder.setHours(72);
+                            if(resActivity[i].joinedUsers.length < resActivity[i].maxMembers/* && finish < searchBorder*/ ){
+                                //console.log('TIME COMPARE', finish, searchBorder, finish < searchBorder);
                                 var actObj = common.deepObjClone(resActivity[i]);
                                 delete actObj['tagsByLanguage'];
                                 actObj.tags = resActivity[i]['tagsByLanguage'];
@@ -465,14 +652,21 @@ module.exports = ActivityOperations = {
     },
 
     //remove user from activity and chat change user fields
-    removeUserFromActivity: function(activityId, userId, callbackDone){
-        console.log('IN REMOVE USER FROM ACTIVITY');
+    removeUserFromActivity: function(activityId, userId, isRemove, callbackDone){
+        //console.log('IN REMOVE USER FROM ACTIVITY');
         async.waterfall([
                 function(callback){
                     Activity.findByIdAndUpdate(activityId,
-                        { $pull: { joinedUsers: userId, activitiesLiked: { activityId: activityId } } }, { new: true })
+                        {
+                            $pull: {
+                                joinedUsers: userId,
+                                activitiesLiked: { activityId: activityId },
+                                followingUsers: userId
+                            }
+                        }, { new: true })
                         .populate('creator', CREATOR_FIELDS)
                         .populate('joinedUsers', JOINED_USERS_FIELDS)
+                        .populate('followingUsers', JOINED_USERS_FIELDS)
                         .exec(function(err, activity){
                                 if(err){ callback(err); }
                                 else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
@@ -484,7 +678,7 @@ module.exports = ActivityOperations = {
                         function(err, chat){
                             if(err){ callback(err); }
                             else{
-                                console.log('AFTER CHAT CHANGES', chat);
+                                //console.log('AFTER CHAT CHANGES', chat);
                                 callback(null, activity)
                             }
                         })
@@ -499,6 +693,7 @@ module.exports = ActivityOperations = {
                             else{
                                 Socket.removeFromChat(userId, activityId);
                                 Notify.leaveActivity(activity, changedUser);
+                                Notify.messageToRemoved(userId, activity.title);
                                 callback(null, activity, changedUser);
                             }
                         });
@@ -514,7 +709,7 @@ module.exports = ActivityOperations = {
                     callbackDone(err);
                 }
                 else{
-                    Socket.sendMyActivityLeave(userId, activity._id);
+                    if(isRemove){ Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date()); }
                     callbackDone(null, activity);
                 }
             })
@@ -560,7 +755,9 @@ module.exports = ActivityOperations = {
             }
         });
     },
-    //creates new activity from old one, change chat id, send request to user join to new activity
+
+    //OLD VERSION
+    // creates new activity from old one, change chat id, send request to user join to new activity
     recurActivity: function(activityId, newTimeStart, newTimeFinish, changedFields, callbackResult){
         async.waterfall([
                 //get parent activity and check if time start in past, clear id, joinedUsers
@@ -681,6 +878,99 @@ module.exports = ActivityOperations = {
             }
         );
     },
+    //new version
+    recurrent: function(activityObj, daysToRepeat, callbackDone){
+        //create activity
+        activityObj['isRecur'] = true;
+
+        ActivityOperations.createActivity(activityObj, false, function(err, resAct){
+            if(err){ callbackDone(err); }
+            else{
+                if(!common.isEmpty(daysToRepeat)){
+                    //console.log('In days to repeat test', daysToRepeat);
+                    recurActs(resAct, daysToRepeat);
+                }
+                callbackDone(null, resAct);
+            }
+        });
+    },
+
+    recurrentWithEdit: function(activityObj, daysToRepeat){
+        recurActs(activityObj, daysToRepeat);
+    },
+
+    leaveOnce: function(userId, activityId, callbackDone){
+        Activity.findByIdAndUpdate(
+            activityId,
+            {
+                $push: { followingUsers: userId },
+                $pull:{ joinedUsers: userId }
+            },
+            {new: true},
+            function(err, resAct){
+                if(err){ callbackDone(err); }
+                else{ callbackDone(null, resAct) }
+        })
+    },
+
+    republish: function(activityObj, callbackDone){
+        async.waterfall([
+            //find old one
+            function(callback){
+                Activity.findById(activityObj._id, function(err, oldAct){
+                    if(err){ callback(err); }
+                    else{ callback(null, oldAct); }
+                })
+            },
+            //save changes to archive
+            function(oldAct, callback){
+                if(!oldAct){ callback(new Error('there is no old activity found')); }
+                else{
+                    RepublishArchive.findOneAndUpdate({ parentId: oldAct._id }, { '$push': { instances: oldAct } }, { upsert: true },
+                    function(err, resArch){
+                        if(err){ callback(err); }
+                        else{ callback(null); }
+                    })
+                }
+            },
+            //change users to followers and update
+            function(callback){
+                var followers = getJoiners(activityObj.joinedUsers);
+                var changingAct = ActivityOperations.prepareToUpdate(activityObj);
+                changingAct.joinedUsers = [];
+                changingAct.joinedUsers.push(changingAct.creator);
+                var index = followers.indexOf(changingAct.creator);
+                if(index > -1){
+                    followers.splice(index, 1);
+                }
+                changingAct['followingUsers'] = followers;
+                Activity.findByIdAndUpdate(changingAct._id, changingAct,
+                    {new: true})
+                    .populate('creator', CREATOR_FIELDS)
+                    .populate('joinedUsers', JOINED_USERS_FIELDS)
+                    .populate('followingUsers', JOINED_USERS_FIELDS)
+                    .exec(function(err, updatedAct){
+                    if(err){ callback(err); }
+                    else{ callback(null, updatedAct) }
+                })
+            }
+        ],
+        function(err, updatedActivity){
+            if(err){
+                log.error(err);
+                callbackDone(err);
+            }
+            else{
+                log.info('republish done');
+                Socket.sendMyActivityUpdate(updatedActivity._id, {
+                    result: 'success',
+                    data: updatedActivity
+                });
+                callbackDone(null, updatedActivity);
+            }
+        })
+
+    },
 
     findActivity: function(activityId, callback){
         Activity.findById(activityId, function(err, resActivity){
@@ -737,15 +1027,13 @@ module.exports = ActivityOperations = {
                     }
                 });
         };
-        log.info('TRYING TO SAVE ACTIVITY:');
-        console.log(activity);
         async.waterfall([
                 function(callback){
                     //console.log('IN WATERFALL: ', activity)
                     var createdActivity = new Activity(activity);
-                    //console.log('Created activity', createdActivity);
                     var activityChat = new Chat( { _id: createdActivity._id, usersInChat:[activity.creator] });
                     createdActivity.joinedUsers.push(activity.creator);
+                    //console.log('Created activity and chat', createdActivity, activityChat);
                     callback(null, createdActivity, activityChat);
                 },
                 function(createdActivity, activityChat, callback){
@@ -760,7 +1048,6 @@ module.exports = ActivityOperations = {
                 function(createdActivity, activityChat, user, callback){
                     Socket.addToChat(createdActivity.creator, activityChat._id);
                     callback(null, createdActivity, user);
-
                 },
                 function(createdActivity, user, callback){
                     if(!isWelcome){
@@ -807,18 +1094,60 @@ module.exports = ActivityOperations = {
                     activityCopy.joinedUsers = [creator];
                     //console.log(activityCopy);
                     //console.log(user);
-                    if(!isWelcome){
+                   /* if(!isWelcome){
                         var userLang = checkLanguage(user.systemLanguage);
-                        console.log("USER LANGUAGE:", userLang, commandDictionary );
+                        //console.log("USER LANGUAGE:", userLang, commandDictionary );
                         Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activityCopy._id,
                             commandDictionary[userLang][WELCOME_MESSAGE] );
-                    }
+                    }*/
                     callbackDone(null, activityCopy);
                 }
             })
     },
 
-    inviteToActivity: function(userId, activityId, isSingle, callbackDone){
+    inviteToActivity: function(link, userId, activityId, isSingle, inviteType, callbackDone){
+        async.waterfall([
+            //create invite
+            function(callback){
+                var inviteObj = {creator: userId, activity: activityId, inviteType:inviteType };
+                if(isSingle != 1){ inviteObj['isSingle'] = isSingle; }
+                var invite = new Invite(inviteObj);
+                invite.save(function(err, inviteRes){
+                    if(err){callback(err); }
+                    else{ console.log('INVITE SAVED: ', inviteRes);callback(null, inviteRes._id); }
+                })
+            },
+            //tinify link
+            function(inviteId, callback){
+                var longLink = link + inviteId;
+                urlShorter.minimizeUrl(longLink, function(err, resLink){
+                    if(err){ callback(err); }
+                    else{ callback(null, resLink) }
+                })
+            },
+            //create message
+            function(resLink, callback){
+                createInviteMessage(userId, activityId, function(err, resMessage){
+                    if(err){ callback(err); }
+                    else{ callback(null, resLink, resMessage) }
+                })
+            }
+        ],
+        function(err, resLink, resMessage){
+            if(err){
+                console.error(err);
+                callbackDone(err);
+            }
+            else{
+                console.log('invite link minified', resLink, resMessage);
+                callbackDone(null, resLink, resMessage);
+            }
+        });
+
+    },
+
+    //old version till 04.02.2016
+    inviteToActivityOld: function(userId, activityId, isSingle, callbackDone){
         var inviteObj = {creator: userId, activity: activityId };
         if(isSingle != 1){ inviteObj['isSingle'] = isSingle; }
         var invite = new Invite(inviteObj);
@@ -874,6 +1203,7 @@ module.exports = ActivityOperations = {
     checkPlaces: function(activityId, callback){
         Activity.findById(activityId)
             .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS)
             .exec(function(err, resAct){
                 if(err){ callback(err); }
                 else if(common.isEmpty(resAct)){ callback(new Error('activity not found')); }
@@ -886,16 +1216,12 @@ module.exports = ActivityOperations = {
     },
 
     getCurrent: function(callback){
-        var date = new Date(2015, 11, 27);
-        var arr = ['198803877117851','198803877117851'];
         var query = Activity
             .find({})
-            .where('timeStart').gt(date)
-            .where('fbId').exists(false)
-            .where('creator').nin(arr)
-            .populate('joinedUsers',
-            '_id surname familyName imageUrl currentLocation')
-            .populate('creator', '_id surname familyName imageUrl currentLocation')
+            .where('timeFinish').gt(Date.now())
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .populate('creator', CREATOR_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS)
 
         query.exec(function(err, resActivities){
             if(err){ callback(err); }
@@ -942,7 +1268,7 @@ module.exports = ActivityOperations = {
                         function(err, resChat){
                             if(err){ callback(err); }
                             else{
-                                //console.log('Support Chat created:', resChat);
+                                console.log('Support Chat created:', resChat);
                                 callback(null, resAct);
                             }
                         })
@@ -1000,7 +1326,7 @@ module.exports = ActivityOperations = {
                     async.eachSeries(resActs, function(activity, callbackEach){
                         ActivityOperations.deleteActivity(activity._id, function(err){
                             if(err){ callbackEach(err); }
-                            else{ callback(null); }
+                            else{ callbackEach(null); }
                         },
                             function(err){
                                 if(err){ callback(err); }
@@ -1171,3 +1497,9 @@ function sendUpdateNtf(activity, creatorSurname, changedFields){
         default: shouldSend = false; break;
 
     }*/
+/*
+
+.find({ location : { $nearSphere : requestObj.cords, $maxDistance: searchDistance }})
+    .where('timeFinish').gt(Date.now())
+    .where('_id').nin(requestObj.notFindArray)
+    .where('isPrivate').ne(true)*/

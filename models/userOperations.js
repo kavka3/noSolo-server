@@ -60,7 +60,7 @@ function exchangeToken(userId, shortToken, callback){
         else{
             var accessToken = res.access_token;
             var expires = res.expires ? res.expires : 0;
-            console.log('FB EXCHANGE SUCCESS', accessToken, expires);
+            //console.log('FB EXCHANGE SUCCESS', accessToken, expires);
             callback(null, accessToken, expires);
         }
     });
@@ -74,18 +74,9 @@ module.exports = {
        })
     },
 
-    getCurrentUser: function(callback){
-        var startSearch = new Date();
-        startSearch.setHours(-96);
-        //console.log('getCurrentUser startSearch', startSearch);
-        User.find({lastVisit:{'$gt': startSearch}, currentLocation: { $exists: true}}, function(err, resUsers){
-            if(err){ callback(err); }
-            else{ callback(null, resUsers) }
-        })
-    },
-
     signIn: function(userArgs, callbackDone){
         var isSignUp = false;
+        //console.log('Signin fingerprints Component', JSON.stringify(userArgs.fingerPrintComponent));
         async.waterfall([
                 function(callback){
                     User.findOne({_id: userArgs._id}, function (err, resUser){
@@ -99,7 +90,7 @@ module.exports = {
                 function(resUser, callback){
                     if(common.isEmpty(resUser)){
                         if(checkFields(userArgs)) {
-                            console.log('USER NOT FOUND: ', resUser);
+                            //console.log('USER NOT FOUND: ', resUser);
                             isSignUp = true;
                             //var date = new Date(userArgs.birthDate);
                             //console.log('NEW DATE: ', date);
@@ -122,7 +113,7 @@ module.exports = {
                     }
                 },
                 function(resUser, callback){
-                    console.log('IN ASK TOKEN', isSignUp);
+                    //console.log('IN ASK TOKEN', isSignUp);
                     if(userArgs.isTokenNeeded && userArgs.socialToken && userArgs.socialToken != 'some token'){
                         exchangeToken(resUser._id, userArgs.socialToken, function(err, longToken, expires){
                             if(err){ callback(err); }
@@ -134,37 +125,67 @@ module.exports = {
                     }
                     else{ callback(null, resUser); }
                 },
+            //check fingerprints
                 function(resUser, callback){
-                    //console.log('Saving user',  resUser);
+                    //console.log('check finger print:', resUser.fingerPrints, userArgs.currentFingerPrint);
+                    if(userArgs.currentFingerPrint){
+                        if(!resUser.fingerPrints || resUser.fingerPrints.length < 1){
+                            resUser['fingerPrints'] = [];
+                            resUser.fingerPrints.push({
+                                fingerPrint: userArgs.currentFingerPrint,
+                                timeStamp: new Date()
+                            });
+                        }
+                        else{
+                            var search = resUser.fingerPrints.filter(function(e){
+                                return e.fingerPrint == userArgs.currentFingerPrint;
+                            });
+                            if(!search || search.length < 1){
+                                resUser.fingerPrints.push({
+                                        fingerPrint: userArgs.currentFingerPrint,
+                                        timeStamp: new Date()
+                                    });
+                            }
+                        }
+                    }
+                    callback(null, resUser);
+                },
+                function(resUser, callback){
+                    //resUser.fingerPrints = null;
                     resUser.lastVisit = new Date();
+                    //console.log('Saving user',  resUser);
                     resUser.save(function(err, resUser){
-                        if(err){ callback(err); }
+                        if(err){
+                            console.error(err);
+                            callback(err);
+                        }
                         else{ callback(null, resUser); }
                     })
 
                 }/*,
-                function(resUser, callback){
-                    if(isSignUp){
-                        console.log('WELCOME ACTIVITY CREATING', isSignUp);
-                        var Activity = require('./activitiesOperations.js');
-                        Activity.createWelcomeActivity(resUser._id, resUser.systemLanguage);
-                        callback(null, resUser);
-                    }
-                    else{
-                        callback(null, resUser);
-                    }
-                }*/
+                 function(resUser, callback){
+                 if(isSignUp){
+                 console.log('WELCOME ACTIVITY CREATING', isSignUp);
+                 var Activity = require('./activitiesOperations.js');
+                 Activity.createWelcomeActivity(resUser._id, resUser.systemLanguage);
+                 callback(null, resUser);
+                 }
+                 else{
+                 callback(null, resUser);
+                 }
+                 }*/
             ],
-        function(err, resUser){
-            if(err){
-                log.error('SIGNIN ERROR: ' + err);
-                callbackDone(err);
-            }
-            else{
-                log.info('User logged: ' + resUser._id);
-                callbackDone(null, resUser, isSignUp);
-            }
-        });
+            function(err, resUser){
+                if(err){
+                    log.error('SIGNIN ERROR: ', err);
+                    callbackDone(err);
+                }
+                else{
+                    log.info('User logged: ' + resUser._id);
+                    callbackDone(null, resUser, isSignUp);
+                }
+            });
+        //callbackDone(new Error('Temporary closed:)'))
     },
 
     findUser: function(userId, callback) {

@@ -44,12 +44,10 @@ var activitiesSchema = new Schema({
     tagsByLanguage: [
         {type: Schema.Types.Mixed}
     ],
-    joinedUsers : {
-        type:[{
+    joinedUsers : [{
         type: String,
         ref: 'NoSoloUser'
     }],
-        validate: [arrayLimit, '{PATH} exceeds the limit of 10']},
     followingUsers: [{
         type: String,
         ref: 'NoSoloUser'
@@ -59,12 +57,10 @@ var activitiesSchema = new Schema({
     }],
     timeStart: {
         type: Date,
-        //default: Date.now,
         required: true
     },
     timeFinish: {
         type: Date,
-        //default: Date.now,
         required: true
     },
     activityDay:{
@@ -99,10 +95,10 @@ var activitiesSchema = new Schema({
         default: true
     },
     maxMembers:{
-        type: Schema.Types.Mixed,
+        type: Number,
         required: true,
-        default: { maxMembers: 1000, spotsLeft: 999 }
-    }, //Number, //1000 for unlimited
+        default: 21
+    }, //Number, //21 for unlimited
     distance: {
         type: Number,
         default: 0
@@ -121,6 +117,10 @@ var activitiesSchema = new Schema({
         type: Boolean,
         required: true,
         default: false
+    },
+    parentActivity: {
+        type: Schema.Types.ObjectId,
+        ref: 'NoSoloActivity'
     },
     tagFace: [{ //BASETAG:0, COMPLEXTAG: 1, PARRENTTAG: 2, USERTAG: 3
         type: Number,

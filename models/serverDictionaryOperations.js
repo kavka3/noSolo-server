@@ -27,7 +27,6 @@ function getDictionary(callbackDone){
                 dictObj['he'][command._id] = command.cmdDictionary.en;
             });
             commandDictionary = dictObj;
-            //var str = JSON.stringify(resDict);
             //console.log('res dict:', commandDictionary);
             if(callbackDone){
                 callbackDone(null, dictObj);
@@ -46,12 +45,15 @@ function createMessage(userLang, messageComponents){
     var resMessage = '';
     messageComponents.forEach(function(component){
         //console.log('createMessage param', component);
-        if(component['param'] != null){
-            resMessage += component['param'];
+        if(component){
+            if(component['param'] != null){
+                resMessage += component['param'];
+            }
+            else{
+                resMessage += commandDictionary[checkedLang][component['commandId']]
+            }
         }
-        else{
-            resMessage += commandDictionary[checkedLang][component['commandId']]
-        }
+
     });
     return resMessage;
 };
@@ -92,18 +94,4 @@ module.exports = {
     checkLanguage: checkLanguage
 
 
-};
-
-function deleteAll(){
-    var connection = require('../lib/db.js').connection;
-    connection.db.dropCollection('serverdictionaries', function(err, result) {
-        if(err){
-            console.error(err)
-        }
-        else{
-            console.log(result)
-        }
-    });
 }
-
-//deleteAll();
