@@ -170,9 +170,11 @@ function checkActivityFields(obj){
     var checkFields = checkIfEmpty(obj);
     if(checkFields.result == 'error'){ return checkFields; }
     else{
+        console.log('DELETE $$hashKey');
+        delete obj['$$hashKey'];
+        console.log('key deleted', obj);
         var resObj = common.deepObjClone(obj);
         resObj.creator = obj.creator._id;
-        delete resObj['$$hashKey'];
         //if(resObj.tags && resObj.tags.length == 0){
             console.log('DELETE TAGS');
             delete resObj.tags;
