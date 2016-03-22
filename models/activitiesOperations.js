@@ -421,6 +421,9 @@ module.exports = ActivityOperations = {
 
     prepareToUpdate: function(obj){
         var resObj = common.deepObjClone(obj);
+        console.log('DELETE $$hashKey');
+        delete resObj['$$hashKey'];
+        console.log('key deleted', resObj);
         resObj.creator = obj.creator._id;
         resObj['creatorName'] = obj.creator.surname;
         if(resObj.tags && resObj.tags.length == 0){
