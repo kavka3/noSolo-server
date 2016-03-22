@@ -172,7 +172,7 @@ function checkActivityFields(obj){
     else{
         var resObj = common.deepObjClone(obj);
         resObj.creator = obj.creator._id;
-        delete obj['$$hashKey'];
+        delete resObj['$$hashKey'];
         //if(resObj.tags && resObj.tags.length == 0){
             console.log('DELETE TAGS');
             delete resObj.tags;
