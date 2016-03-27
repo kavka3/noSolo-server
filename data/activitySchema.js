@@ -244,35 +244,11 @@ activitiesSchema.pre('save', function(next){
     });
 });
 
-activitiesSchema.pre('find', function(){
-    console.log('FIND PRE',this instanceof mongoose.Query);
-});
 
-activitiesSchema.post('find', function(){
-    console.log('FIND POST',this instanceof mongoose.Query);
-});
 
-activitiesSchema.pre('findOneAndUpdate', function() {
-    console.log('IN ACTIVITY PRE findOneAndUpdate: ');
-   /* var self = this;
-    async.waterfall([
-            function(callback){
-                console.log('IN ACTIVITY PRE findOneAndUpdate: ', self.maxMembers, self.joinedUsers.length);
-                if(self.maxMembers <= self.joinedUsers.length){
-                    callback(new Error('no spots left'));
-                }
-                else{ callback(); }
-            },
-            function(callback){
-                saveAvatarChanges(self);
-                callback();
-            }
-        ],
-        function(err){
-            if(err){ }//next(err); }
-            else{ }//next(); }
-        });*/
-});
+
+
+
 
 
 

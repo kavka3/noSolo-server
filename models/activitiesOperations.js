@@ -22,7 +22,8 @@ var log = require('../lib/log.js')(module),
     DELAY = 2000,
     COUNTER = 3,
     JOINED_USERS_FIELDS = '_id surname familyName imageUrl birthDate gender about activityCreatedNumber activityJoinedNumber',
-    CREATOR_FIELDS = '_id surname familyName imageUrl',
+    CREATOR_FIELDS = '_id surname familyName imageUrl systemLanguage',
+    TAG_FIELDS = '_title imageUrl tagCategory tagDictionary',
 
     //ids of server commands
     CHANGED_TIME = 9,
@@ -550,6 +551,7 @@ module.exports = ActivityOperations = {
             .populate('creator', CREATOR_FIELDS)
             .populate('joinedUsers', JOINED_USERS_FIELDS)
             .populate('followingUsers', JOINED_USERS_FIELDS)
+            .populate('tags', TAG_FIELDS)
             .exec(function(err, resAct){
                 if (err) {
                     log.error(err);
@@ -561,8 +563,10 @@ module.exports = ActivityOperations = {
                 }
                 else{
                     //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
-                    sendUpdateNtf(resAct, activityObj['creatorName'], activityObj['changedField'], activityObj);
-                    callback(null, resAct);
+                    var activityClone = common.deepObjClone(resAct);
+                    activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
+                    sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                    callback(null, activityClone);
                 }
             })
     },
