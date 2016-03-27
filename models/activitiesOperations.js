@@ -1103,6 +1103,7 @@ module.exports = ActivityOperations = {
                     };
                     activityCopy['creator'] = creator;
                     activityCopy.joinedUsers = [creator];
+                    activityCopy['tags'] = createdActivity.tagsByLanguage;
                     //console.log(activityCopy);
                     //console.log(user);
                    /* if(!isWelcome){
