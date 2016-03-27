@@ -360,8 +360,6 @@ function createInviteMessage(userId, activityId, callbackDone){
                  }*/
                 //else{
                 var date = new Date(resActivity.timeStart);
-                //temporary solution for Jerusalem summer time
-                //date.setHours(date.getHours() + 3);
                 time = date;
                 //}
                 var timeComponents = getTimeComponents(time);
