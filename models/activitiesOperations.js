@@ -332,39 +332,49 @@ function getTimeComponents(time){
 
 function createInviteMessage(userId, activityId, callbackDone){
     async.waterfall([
-        //check user language
-        function(callback){
-            User.findById(userId, 'systemLanguage', function(err, resUser){
-                if(err){ callback(err); }
-                else if(!common.isEmpty(resUser)){ callback(null, resUser.systemLanguage); }
-                else{ callback(new Error('user not found')); }
-            })
-        },
-        //find activity
-        function(userLang, callback){
-            Activity.findById(activityId, function(err, resActivity){
-                if(err){ callback(err); }
-                else if(!common.isEmpty(resActivity)){ callback(null, userLang, resActivity); }
-                else{ callback(new Error('activity not found')) }
-            })
-        },
-        //create message
-        function(userLang, resActivity, callback){
-            var messageComponents = [
-                {commandId: GOING},
-                {param: resActivity.title}
-            ];
-            var timeComponents = getTimeComponents(resActivity.timeStart);
-            var resMessageParams = messageComponents.concat(timeComponents);
-            resMessageParams.push({ param: WHITESPACE });
-            var resMessage = createMessage(userLang, resMessageParams);
-            callback(null, resMessage);
-        }
-    ],
-    function(err, resMessage){
-        if(err){ callbackDone(err); }
-        else{ callbackDone(null, resMessage); }
-    })
+            //check user language
+            function(callback){
+                User.findById(userId, 'systemLanguage', function(err, resUser){
+                    if(err){ callback(err); }
+                    else if(!common.isEmpty(resUser)){ callback(null, resUser.systemLanguage); }
+                    else{ callback(new Error('user not found')); }
+                })
+            },
+            //find activity
+            function(userLang, callback){
+                Activity.findById(activityId, function(err, resActivity){
+                    if(err){ callback(err); }
+                    else if(!common.isEmpty(resActivity)){ callback(null, userLang, resActivity); }
+                    else{ callback(new Error('activity not found')) }
+                })
+            },
+            //create message
+            function(userLang, resActivity, callback){
+                var messageComponents = [
+                    {commandId: GOING},
+                    {param: resActivity.title}
+                ];
+                var time = null;
+                /*if(resActivity.localTimeStart){
+                 time = resActivity.localTimeStart;
+                 }*/
+                //else{
+                var date = new Date(resActivity.timeStart);
+                //temporary solution for Jerusalem summer time
+                date.setHours(date.getHours() + 3);
+                time = date;
+                //}
+                var timeComponents = getTimeComponents(time);
+                var resMessageParams = messageComponents.concat(timeComponents);
+                resMessageParams.push({ param: WHITESPACE });
+                var resMessage = createMessage(userLang, resMessageParams);
+                callback(null, resMessage);
+            }
+        ],
+        function(err, resMessage){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resMessage); }
+        })
 
 };
 
