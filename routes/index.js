@@ -867,7 +867,7 @@ module.exports = function(app){
                 response.json({result: 'error', data: err.message});
             }
             else{
-                Socket.sendMyActivityDelete(request.body._id, { result: 'success', data: request.body._id });
+                Socket.sendMyActivityDelete(request.body._id, { result: 'success', data:{activityId: request.body._id} });
                 response.json({result: 'success'});
             }
         })
