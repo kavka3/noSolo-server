@@ -3,6 +3,7 @@ var log = require('../lib/log.js')(module),
     common = require('../lib/commonFunctions.js'),
     Chat = require('../data/chatSchema.js'),
     Activity = require('../data/activitySchema.js'),
+    ChatBroker = require('./chatBroker.js'),
     User = require('../data/userSchema.js'),
     Tag = require('./tagsOperations.js'),
     Socket = require('../lib/socket.js'),
@@ -263,7 +264,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
             if(err){ log.error(err); }
             else{
                 var resultMessage = createMessage(resUser.systemLanguage, message);
-                Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage);
+                Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
             }
         })
 
@@ -1057,6 +1058,14 @@ module.exports = ActivityOperations = {
                         else{ callback(null, createdActivity, activityChat) }
                     })
                 },
+               /* need it for new chat boxes
+
+               function(createdActivity, activityChat, callback){
+                    ChatBroker.createChatBox(createdActivity.creator, createdActivity._id, function(err){
+                        if(err){callback(err)}
+                        else{ callback(null, createdActivity, activityChat) }
+                    })
+                },*/
                 function(createdActivity, activityChat, callback){
                     tryToSave(createdActivity, activityChat, callback);
                 },
