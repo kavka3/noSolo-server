@@ -277,6 +277,7 @@ function updateActivity(activityToUpdate, response, callbackDone){
                 result: 'success',
                 data: resAct
             };
+            resJson.notForCreator = true;
             Socket.sendMyActivityUpdate(resAct._id, resJson/*, resUsers*/);
             callback(null, resJson);
         }
@@ -841,6 +842,7 @@ module.exports = function(app){
             else{
                 resJson.result = 'success';
                 resJson.data = resultActivity;
+                resJson.notForCreator = true;
             }
             Socket.sendMyActivityUpdate(resultActivity._id, { result: 'success', data: resultActivity });
             response.json(resJson);
@@ -1152,6 +1154,7 @@ module.exports = function(app){
             if(err){response.json({ result: 'error', data: error.message }); }
             else{
                 var resJson = { result: 'success', data: result };
+                resJson.notForCreator = true;
                 Socket.sendMyActivityUpdate(result._id, resJson/*, resUsers*/);
                 response.json(resJson);
             }
