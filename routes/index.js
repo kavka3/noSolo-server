@@ -1150,7 +1150,11 @@ module.exports = function(app){
     app.post('/update_image', function(request, response){
         Activity.updateImage(request.body, function(err, result){
             if(err){response.json({ result: 'error', data: error.message }); }
-            else{ response.json({ result: 'success', data: null }); }
+            else{
+                var resJson = { result: 'success', data: result };
+                Socket.sendMyActivityUpdate(result._id, resJson/*, resUsers*/);
+                response.json(resJson);
+            }
         })
     });
 

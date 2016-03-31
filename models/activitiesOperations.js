@@ -576,20 +576,28 @@ module.exports = ActivityOperations = {
         var activityObj = common.deepObjClone(activity);
         delete activityObj._id;
         if(activityObj.creator){ activityObj.creator = activity.creator._id; }
-        Activity.findByIdAndUpdate(activity._id, activityObj, {upsert: true, new: true}, function(err, resAct){
-            if (err) {
-                log.error(err);
-                callback(err);
-            }
-            else if(common.isEmpty(resAct)){
-                log.info('activity is not found');
-                callback(new Error('activity is not found'));
-            }
-            else{
-                //updateUserLAUrl(resAct.creator, activityObj.imageUrl);
-                callback(null, resAct);
-            }
-        })
+        Activity.findByIdAndUpdate(activity._id, activityObj, {upsert: true, new: true})
+            .populate('creator', CREATOR_FIELDS)
+            .populate('joinedUsers', JOINED_USERS_FIELDS)
+            .populate('followingUsers', JOINED_USERS_FIELDS)
+            .populate('tags', TAG_FIELDS)
+            .exec(function(err, resAct){
+                if (err) {
+                    log.error(err);
+                    callback(err);
+                }
+                else if(common.isEmpty(resAct)){
+                    log.info('activity is not found');
+                    callback(null, 'activity is not found');
+                }
+                else{
+                    //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
+                    var activityClone = common.deepObjClone(resAct);
+                    activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
+                    sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                    callback(null, activityClone);
+                }
+            })
     },
 
     //discover activity
