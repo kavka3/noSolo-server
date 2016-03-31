@@ -106,171 +106,171 @@ function getAddressee(activity){
 };
 
 function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
-    var usersIds = activity.joinedUsers.map(function(user){
-        return user._id;
-    });
-    var message =  [{ commandId: MULTI_PARAMS_MSG }],
-        forEveryBody = true,
-        shouldSend = true,
-        messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }],
-        messageForPush = null
-        ;
+    if(!common.isEmpty(changedFields)){
+        var usersIds = activity.joinedUsers.map(function(user){
+            return user._id;
+        });
+        var message =  [{ commandId: MULTI_PARAMS_MSG }],
+            forEveryBody = true,
+            shouldSend = true,
+            messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }],
+            messageForPush = null
+            ;
         //notification = null,
         //ntfAddressee = getAddressee(activity);
-    ;
+        ;
 
-    console.log('IN CHANGE FIELDS:', changedFields[0]);
+        console.log('IN CHANGE FIELDS:', changedFields[0]);
 
-    switch(changedFields[0]){
-        case 'timeStart':case 'timeFinish': {
-        var iterator = function(user, callbackI){
-            if(user.settings.isSendReminder && user.settings.multipleReminders &&
-                user.settings.multipleReminders.length > 0){
-                common.setMultipleReminder(user, activity, callbackI);
-            }
-            else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
-                common.setReminder(user, activity, callbackI);
-            }
-            else{ callbackI(null); }
-        };
-        common.deleteReminder(activity._id, function(err){
-            if(err){log.error(err);}
-            else{
-                async.waterfall([
-                    function(callback){
-                        User.find({ '_id': {$in: usersIds } }, function(err, resUsers){
-                           if(err){ callback(err); }
-                            else{ callback(null, resUsers); }
-                        });
-                    },
-                    function(users, callback){
-                        async.eachSeries(users, iterator, function(err, res){
-                            if(err){ callback(err); }
-                            else{ callback(null); }
-                        })
-                    }
-                ],
-                function(err){
-                    if(err){log.error(err); }
-                    else{ log.info('ACTIVITY OPERATIONS ACTIVITY REMINDERS UPDATED'); }
-                })
-            }
-        });
-        if(changedFields.length <= 2){
-            message = [{commandId: YOU},{commandId: CHANGED_TIME } ];
-            messageForOthers = [{ param: creatorSurname},  { commandId: CHANGED_TIME }];
-
-        }
-
-    };break;
-        case 'location': {
-            if(changedFields.length == 1){
-                message = [{ commandId: CHANGED_LOCATION }];
-                messageForOthers = [{ commandId: ACTIVITY_CHANGED_NTF_1}, {param: creatorSurname}, { commandId: ACTIVITY_CHANGED_NTF_2 }];
-
-            }
-
-        };break;
-        case 'maxMembers':{
-            if(changedFields.length == 1){
-                var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
-                message =  [{ commandId: YOU} , { commandId: CHANGED_MAX_MEMBERS} , { param: maxMembers }];
-                messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_MAX_MEMBERS }, { param: maxMembers }];
-                //console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
-            }
-
-        };break;
-        case 'isApprovalNeeded':{
-            if(changedFields.length == 1) {
-                if (activity.isApprovalNeeded) { message = [{ commandId: JOIN_APPROVE_YES }]; }
-                else { message = [{ commandId: JOIN_APPROVE_NO }]; }
-            }
-            forEveryBody = false;
-        };break;
-        case 'tags':{
-           /* if(changedFields.length == 1) { message = [{ commandId: CHANGED_TAGS }]; }
-            forEveryBody = false;*/
-            shouldSend = false;
-        };break;
-        case 'isPrivate':{
-            //console.log('IN PRIVATE CASE: ', activity);
-            if(changedFields.length == 1) {
-                if(activity.isPrivate){
-                    message = [{ commandId: YOU }, { commandId: CHANGED_PRIVATE_YES }];
-                    messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_PRIVATE_YES }];
+        switch(changedFields[0]){
+            case 'timeStart':case 'timeFinish': {
+            var iterator = function(user, callbackI){
+                if(user.settings.isSendReminder && user.settings.multipleReminders &&
+                    user.settings.multipleReminders.length > 0){
+                    common.setMultipleReminder(user, activity, callbackI);
                 }
+                else if(user.settings.isSendReminder && user.settings.reminderTime > 0){
+                    common.setReminder(user, activity, callbackI);
+                }
+                else{ callbackI(null); }
+            };
+            common.deleteReminder(activity._id, function(err){
+                if(err){log.error(err);}
                 else{
-                    message = [{ commandId: CHANGED_PRIVATE_NO }];
-                    messageForOthers = [{ commandId: CHANGED_PRIVATE_NO_FOR_OTHERS }];
-                }
-            }
-        };break;
-        case 'description': {
-            if(changedFields.length == 1) {
-                message = [{ commandId: CHANGED_DESCRIPTION}];
-                messageForOthers = [{ commandId: CHANGE_DESCRIPTION_1 }, { param: creatorSurname }, { commandId: CHANGE_DESCRIPTION_2 }];
-            }
-        };break;
-        case 'title':{
-            if(changedFields.length == 1) {
-                message = [{ commandId: CHANGED_TITLE }];
-                messageForOthers = [ { commandId: CHANGE_TITLE_1 }, { param: creatorSurname }, { commandId: CHANGE_TITLE_2 } ];
-                messageForPush = [
-                    { param: creatorSurname },
-                    { commandId: CHANGE_TITLE_2 },
-                    { commandId: FROM },
-                    { param: oldActivity.title },
-                    { commandId: TO },
-                    { param: activity.title }
-                ]
-            }
-        };break;
-
-        default: shouldSend = false; break;
-
-    }
-    //console.log('IN CHANGE FIELDS SHOULD SEND', shouldSend);
-    //TODO 1 make processing to client side should send message with all languages and choose language to show message in app see todo 2 at the end of the file
-    /*server should do:
-     if(shouldSend){
-     if(forEveryBody){
-     Socket.sendToOthers(messageForOthers, activity._id, activity.creator);
-     }
-     Socket.sendToCreator(activity.creator, NOSOLO_ID, NOSOLO_NAME, activity._id, message);
-     }
-    *
-    * */
-    if(shouldSend){
-        if(forEveryBody){
-            var users = User.find({ '_id': { $in: usersIds } },
-                function(err, resUsers){
-                    if(err){log.error(err); }
-                    else{
-                        resUsers.forEach(function(user){
-                            if(user._id != activity.creator._id){
-                                var resultMessage = createMessage(user.systemLanguage, messageForOthers);
-                                var pushMsg = null;
-                                if(messageForPush){
-                                    pushMsg = createMessage(user.systemLanguage, messageForPush );
-                                    console.log('Push message', pushMsg);
-                                }
-                                Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
+                    async.waterfall([
+                            function(callback){
+                                User.find({ '_id': {$in: usersIds } }, function(err, resUsers){
+                                    if(err){ callback(err); }
+                                    else{ callback(null, resUsers); }
+                                });
+                            },
+                            function(users, callback){
+                                async.eachSeries(users, iterator, function(err, res){
+                                    if(err){ callback(err); }
+                                    else{ callback(null); }
+                                })
                             }
-                        });
-                    }
-                });
-        }
-        user = User.findById(activity.creator._id, function(err, resUser){
-            if(err){ log.error(err); }
-            else{
-                var resultMessage = createMessage(resUser.systemLanguage, message);
-                Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
+                        ],
+                        function(err){
+                            if(err){log.error(err); }
+                            else{ log.info('ACTIVITY OPERATIONS ACTIVITY REMINDERS UPDATED'); }
+                        })
+                }
+            });
+            if(changedFields.length <= 2){
+                message = [{commandId: YOU},{commandId: CHANGED_TIME } ];
+                messageForOthers = [{ param: creatorSurname},  { commandId: CHANGED_TIME }];
+
             }
-        })
 
+        };break;
+            case 'location': {
+                if(changedFields.length == 1){
+                    message = [{ commandId: CHANGED_LOCATION }];
+                    messageForOthers = [{ commandId: ACTIVITY_CHANGED_NTF_1}, {param: creatorSurname}, { commandId: ACTIVITY_CHANGED_NTF_2 }];
+
+                }
+
+            };break;
+            case 'maxMembers':{
+                if(changedFields.length == 1){
+                    var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
+                    message =  [{ commandId: YOU} , { commandId: CHANGED_MAX_MEMBERS} , { param: maxMembers }];
+                    messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_MAX_MEMBERS }, { param: maxMembers }];
+                    //console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
+                }
+
+            };break;
+            case 'isApprovalNeeded':{
+                if(changedFields.length == 1) {
+                    if (activity.isApprovalNeeded) { message = [{ commandId: JOIN_APPROVE_YES }]; }
+                    else { message = [{ commandId: JOIN_APPROVE_NO }]; }
+                }
+                forEveryBody = false;
+            };break;
+            case 'tags':{
+                /* if(changedFields.length == 1) { message = [{ commandId: CHANGED_TAGS }]; }
+                 forEveryBody = false;*/
+                shouldSend = false;
+            };break;
+            case 'isPrivate':{
+                //console.log('IN PRIVATE CASE: ', activity);
+                if(changedFields.length == 1) {
+                    if(activity.isPrivate){
+                        message = [{ commandId: YOU }, { commandId: CHANGED_PRIVATE_YES }];
+                        messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_PRIVATE_YES }];
+                    }
+                    else{
+                        message = [{ commandId: CHANGED_PRIVATE_NO }];
+                        messageForOthers = [{ commandId: CHANGED_PRIVATE_NO_FOR_OTHERS }];
+                    }
+                }
+            };break;
+            case 'description': {
+                if(changedFields.length == 1) {
+                    message = [{ commandId: CHANGED_DESCRIPTION}];
+                    messageForOthers = [{ commandId: CHANGE_DESCRIPTION_1 }, { param: creatorSurname }, { commandId: CHANGE_DESCRIPTION_2 }];
+                }
+            };break;
+            case 'title':{
+                if(changedFields.length == 1) {
+                    message = [{ commandId: CHANGED_TITLE }];
+                    messageForOthers = [ { commandId: CHANGE_TITLE_1 }, { param: creatorSurname }, { commandId: CHANGE_TITLE_2 } ];
+                    messageForPush = [
+                        { param: creatorSurname },
+                        { commandId: CHANGE_TITLE_2 },
+                        { commandId: FROM },
+                        { param: oldActivity.title },
+                        { commandId: TO },
+                        { param: activity.title }
+                    ]
+                }
+            };break;
+
+            default: shouldSend = false; break;
+
+        }
+        //console.log('IN CHANGE FIELDS SHOULD SEND', shouldSend);
+        //TODO 1 make processing to client side should send message with all languages and choose language to show message in app see todo 2 at the end of the file
+        /*server should do:
+         if(shouldSend){
+         if(forEveryBody){
+         Socket.sendToOthers(messageForOthers, activity._id, activity.creator);
+         }
+         Socket.sendToCreator(activity.creator, NOSOLO_ID, NOSOLO_NAME, activity._id, message);
+         }
+         *
+         * */
+        if(shouldSend){
+            if(forEveryBody){
+                var users = User.find({ '_id': { $in: usersIds } },
+                    function(err, resUsers){
+                        if(err){log.error(err); }
+                        else{
+                            resUsers.forEach(function(user){
+                                if(user._id != activity.creator._id){
+                                    var resultMessage = createMessage(user.systemLanguage, messageForOthers);
+                                    var pushMsg = null;
+                                    if(messageForPush){
+                                        pushMsg = createMessage(user.systemLanguage, messageForPush );
+                                        console.log('Push message', pushMsg);
+                                    }
+                                    Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
+                                }
+                            });
+                        }
+                    });
+            }
+            user = User.findById(activity.creator._id, function(err, resUser){
+                if(err){ log.error(err); }
+                else{
+                    var resultMessage = createMessage(resUser.systemLanguage, message);
+                    Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
+                }
+            })
+
+        }
     }
-
-
 };
 
 function checkDictionary(){
