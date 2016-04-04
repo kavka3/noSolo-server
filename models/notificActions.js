@@ -11,6 +11,7 @@ var log = require('../lib/log.js')(module),
     Socket = require('../lib/socket.js'),
     Activity = connection.model('NoSoloActivity'),
     Chat = connection.model('NoSoloChat'),
+    ChatBroker = require('./chatBroker.js'),
 //notification types
     LIKE_ACTIVITY = 1,
     JOIN_ACTIVITY = 2,
@@ -117,7 +118,6 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                 }
                                 else{
                                     console.log('USER ADDED TO ACTIVITY ', changedAct.title);
-                                    Socket.addToChat(userId, resAct._id);
                                     callback(null, changedAct);
 
                                 }
@@ -131,6 +131,16 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                     if(err){ callback(err) }
                     else{ callback(null, resAct) }
                 });*/
+            },
+            function(resAct, callback){
+                ChatBroker.createChatBox(userId, activityId, function(err){
+                    if(err){ callback(err); }
+                    else{callback(null, resAct); }
+                })
+            },
+            function(resAct, callback){
+                Socket.addToChat(userId, resAct._id);
+                callback(null, resAct);
             },
             function(resAct, callback){
                 User.findByIdAndUpdate(userId,
