@@ -300,6 +300,46 @@ function updateActivity(activityToUpdate, response, callbackDone){
 
 module.exports = function(app){
 
+    app.get('/connection', function(request, response){
+        console.log('IN GET CONNECTION', request.query);
+        var productionServer1 = 'https://salty-peak-2515.herokuapp.com/',
+            productionServer2 = 'https://floating-depths-2240.herokuapp.com/',
+            developmentServer = 'https://nosolodev.herokuapp.com/',
+            localHost = 'http://localhost:5000/',
+            redirectProduction = 'https://tranquil-shore-8222.herokuapp.com/',
+            redirectDev = 'https://redirect-dev.herokuapp.com/',
+            redirectLocal = 'http://localhost:11000/'
+            ;
+        if(request.query.appStatus == 'development'){
+            if(request.query.isLocal == 'true'){
+                response.json({ serverURL: localHost, redirectURL: redirectLocal });
+            }
+            /*else if(request.query.version == "BGU"){
+             response.json({ serverURL: productionServer1, redirectURL: redirectProduction });
+             }*/
+            else{
+                response.json({ serverURL: developmentServer, redirectURL: redirectProduction });
+            }
+
+        }
+        else{
+            if(request.query.isLocal == 'true'){
+                response.json({ serverURL: localHost, redirectURL: redirectLocal });
+            }
+            else if(request.query.appVersion == 10){
+                response.json({ serverURL: productionServer2, redirectURL: redirectDev })
+            }
+            else{
+                response.json({ serverURL: productionServer1, redirectURL: redirectDev })
+            }
+
+
+            /* else{
+             response.json({ serverURL: productionServer1, redirectURL: redirectDev });
+             }*/
+        }
+    });
+
     app.get('/', function(request, response){
         /* Chat.createMessage('1', '2', function(err){
          if(err){
@@ -1359,35 +1399,7 @@ module.exports = function(app){
         else{ response.json({result: 'error', data: 'User not found' }); }
     });
 
-    //dynamyc url for app
-    app.get('/connection', function(request, response){
-        var productionServer1 = 'https://salty-peak-2515.herokuapp.com/',
-            productionServer2 = 'https://floating-depths-2240.herokuapp.com/',
-            developmentServer = 'https://nosolodev.herokuapp.com/',
-            localHost = 'http://localhost:5000/',
-            redirectProduction = 'https://tranquil-shore-8222.herokuapp.com/',
-            redirectDev = 'https://redirect-dev.herokuapp.com/',
-            redirectLocal = 'http://localhost:11000/'
-        ;
-        if(request.query.appStatus == 'development'){
-            if(request.query.isLocal == 'true'){
-                response.json({ serverURL: localHost, redirectURL: redirectLocal });
-            }
-            else{
-                response.json({ serverURL: developmentServer, redirectURL: redirectDev });
-            }
-
-        }
-        else{
-            if(request.query.version >= 5.8){
-                response.json({ serverURL: productionServer1, redirectURL: redirectProduction });
-            }
-            else{
-                response.json({ serverURL: productionServer2, redirectURL: redirectProduction });
-            }
-        }
-    });
-
+    //current activities for admin app
     //current activities for admin app
     app.get('/get_current', function(request, response){
         Activity.getCurrent(function(err, resActivities){
