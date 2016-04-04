@@ -775,7 +775,7 @@ module.exports = function(app){
                         Socket.sendMyActivityUpdate(activity._id, { result: 'success', data: activity });
                     }
                     console.log('user_join_activity: success', activity);
-                    response.json({ response: 'success', data: null});
+                    response.json({ response: 'success', data: activity});
                 }
             });
     });
