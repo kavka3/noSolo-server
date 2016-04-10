@@ -104,7 +104,7 @@ function addUserToActivity(activityCreator, activityId, userId, isRecur, callbac
                                 callback(err)
                             }
                             else {
-                                if(changedAct.joinedUsers.length > changedAct.maxMembers){
+                                if(changedAct.maxMembers != 21 && changedAct.joinedUsers.length > changedAct.maxMembers){
                                     Activity.findOneAndUpdate({ _id: resAct._id },
                                         {$pull: {joinedUsers: userId}},
                                         {upsert: true}, function (err, canceledUpdate) {

@@ -42,7 +42,7 @@
     "mongoose-autoinc": "~0.0.2",
     "multer": "~0.1.8",
     "nconf": "~0.7.1",
-    "node-gcm": "~0.9.15",
+    "node-gcm": "~0.14.0",
     "npm": "~3.3.5",
     "passport": "~0.2.1",
     "passport-facebook": "~2.0.0",
