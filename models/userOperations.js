@@ -103,6 +103,7 @@ module.exports = {
                                 savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
                                     getMinAge(userArgs.birthDate);
                             }
+                            savingUser.radius = 5;
                             callback(null, savingUser);
                         }
                         else{ callback(new Error('not enough fields to signUp')); }
