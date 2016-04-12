@@ -1630,8 +1630,21 @@ module.exports = function(app){
                 response.json(resJsn);
             })
         }
+    });
+
+    app.post('/message_viewed', function(request, response){
+        ChatBroker.messageViewed(request.body.userId, request.body.messageIds, function(err, res){
+            if(err){
+                log.error(err);
+            }
+            else{
+                //
+            }
+            response.send();
+        })
     })
 };
+
 /*
 checkActivityFieldsUpd(request.body, function(err, activityObj){
     if(!err){

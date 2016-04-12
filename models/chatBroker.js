@@ -27,6 +27,14 @@ function saveMessage(response, resultChat, messageBox, callback){
 
 
 var ChatManager = {
+    messageViewed: function(userId, messageIds, callback){
+        Message.update({ _id : { $in: messageIds }}, { $push: { usersViewed: userId }}, {multi: true},
+        function(err, res){
+            if(err){ callback(err); }
+            else{ callback(null); }
+        })
+    },
+
     addUserToChat: function(chatId, userId, callbackDone){
         async.waterfall([
             function(callback){
@@ -150,39 +158,42 @@ var ChatManager = {
                     }
                 },
                 function(messageArray, isClosed, callback){
-                    var messages = [];
-                    var iteratorI = function(messageId, callbackI){
-                        Message.findById(messageId, function (err, resMessage, affected){
-                            if (err){ callback(err); }
-                            else{
-                                messages.push(resMessage);
-                                callbackI();
-                            }
-                        });
-                    };
                     if(!common.isEmpty(messageArray)){
-                        async.eachSeries(messageArray, iteratorI, function (err) {
-                            if(err){
-                                log.error(err);
+                        Message.find({ _id: { $in: messageArray } }, function(err, resMessages){
+                            if(!common.isEmpty(resMessages)){
+                                var finalMessages = [];
+                                for(var i = 0; i < resMessages.length; i++){
+                                    var message = resMessages[i];
+                                    if(message.notForCreator && message.notForCreator.notForCreator){
+                                        if(message.notForCreator.activityCreator == userId){
+                                            continue;
+                                        }
+                                    }
+                                    if(message.notForCreator && message.notForCreator.notForOthers){
+                                        if(message.notForCreator.activityCreator != userId){
+                                            continue;
+                                        }
+                                    }
+                                    if(message.notForCreator && message.notForCreator.joinedUser ){
+                                        if(message.notForCreator.joinedUser == userId){
+                                            continue;
+                                        }
+                                    }
+                                    finalMessages.push(message);
+                                }
+                                callback(null, finalMessages, isClosed);
                             }
-                            callback(null, messages, isClosed);
                         });
                     }
                     else{
                         callback(null, null, isClosed);
                     }
-                },
-                function(messages, isClosed, callback){
-                    callbackRes(null, messages, isClosed);
-                    callback();
                 }
 
         ],
-        function(err){
-            if(err){
-                log.error(err);
-                callbackRes(err);
-            }
+        function(err, messages, isClosed){
+            if(err){ callbackRes(err); }
+            else{ callbackRes(null, messages, isClosed); }
         });
     },
 
@@ -194,6 +205,7 @@ var ChatManager = {
             messageText: messageForPush
         }
     },
+
     createMessage: function(userId, userName, chatId, message, messageId, notForCreator, messageType, imageUrl, tbNlImageUrl, messageTime, callback){
         if(common.isEmpty(userId) || common.isEmpty(userName) || common.isEmpty(chatId) || (messageType == 'text' && common.isEmpty(message))){
             callback(new Error(NOT_ENOUGH_FIELDS));
@@ -201,7 +213,7 @@ var ChatManager = {
         else{
             var nfc = notForCreator ? notForCreator : { notForCreator : false, activityCreator: null, notForOthers: false, joinedUser: false };
             var time = messageTime? messageTime: new Date().getTime();
-            console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc );
+            //console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc );
             var message = new Message({
                 _id: messageId,
                 creator: userId,
@@ -212,9 +224,10 @@ var ChatManager = {
                 notForCreator: nfc,
                 messageType: messageType,
                 imageUrl: imageUrl,
-                tbNlImageUrl: tbNlImageUrl
+                tbNlImageUrl: tbNlImageUrl,
+                usersViewed: [userId]
             });
-            console.log('MESSAGE CREATED',message);
+            //console.log('MESSAGE CREATED',message);
             message.save(function(err){
                 if(err){
                     log.error(err);
@@ -361,6 +374,7 @@ var ChatManager = {
             else{ callbackDone(null, resChats); }
         })
     },
+
     getChat: function(chatId, callbackDone){
         var query = Chat
                 .findById(chatId, '_id usersInChat messages crm')
@@ -461,3 +475,28 @@ Chat.findById(chatId, function(err, result, affected){
  }
  }
  });*/
+
+/*
+function(messageArray, isClosed, callback){
+    var messages = [];
+    var iteratorI = function(messageId, callbackI){
+        Message.findById(messageId, function (err, resMessage, affected){
+            if (err){ callback(err); }
+            else{
+                messages.push(resMessage);
+                callbackI();
+            }
+        });
+    };
+    if(!common.isEmpty(messageArray)){
+        async.eachSeries(messageArray, iteratorI, function (err) {
+            if(err){
+                log.error(err);
+            }
+            callback(null, messages, isClosed);
+        });
+    }
+    else{
+        callback(null, null, isClosed);
+    }
+}*/

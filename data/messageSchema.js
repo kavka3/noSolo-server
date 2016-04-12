@@ -20,7 +20,6 @@ var messageSchema =  new Schema({
     },
     messageTime: {
         type: Number,
-        //default: Date.now,
         required: true
     },
     messageText: {
@@ -37,15 +36,16 @@ var messageSchema =  new Schema({
     userName:{
         type:String
     },
-    /*tbNlLocalImageUrl:{
-        type:String
-    },*/
     tbNlImageUrl:{
         type:String
     },
     notForCreator:{
         type: Schema.Types.Mixed // {notForCreator: true, activityCreator: activity._id, notForOthers: true }
-    }
+    },
+    usersViewed:[{
+        type: String,
+        ref: 'NoSoloUser'
+    }]
 });
 
 //messageSchema.plugin(autoIncrement.plugin, 'NoSoloMessage');
