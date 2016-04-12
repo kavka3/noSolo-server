@@ -716,8 +716,8 @@ module.exports = ActivityOperations = {
                             }
                             else{
                                 console.log('removeUserFromActivity',activityId);
-                                //Socket.removeFromChat(userId, activityId);
-                                //Notify.leaveActivity(activity, changedUser);
+                                Socket.removeFromChat(userId, activityId);
+                                Notify.leaveActivity(activity, changedUser);
                                 //Notify.messageToRemoved(userId, activity.title);
                                 callback(null, activity, changedUser);
                             }
