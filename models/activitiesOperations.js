@@ -725,7 +725,18 @@ module.exports = ActivityOperations = {
                 },
                 function(activity, user, callback){
                     common.removeUserFromTask(activity._id, user._id);
-                    callback(null, activity);
+                    callback(null, activity, user);
+                },
+                function(activity, user, callback){
+                    if(isRemove){
+                        Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date(),
+                        function(){
+                            callback(activity, user);
+                        });
+                    }
+                    else{
+                        callback(activity);
+                    }
                 }
             ],
             function(err, activity){
@@ -734,7 +745,6 @@ module.exports = ActivityOperations = {
                     callbackDone(err);
                 }
                 else{
-                    if(isRemove){ Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date()); }
                     callbackDone(null, activity);
                 }
             })
