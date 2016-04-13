@@ -731,11 +731,11 @@ module.exports = ActivityOperations = {
                     if(isRemove){
                         Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date(),
                         function(){
-                            callback(activity, user);
+                            callback(null, activity, user);
                         });
                     }
                     else{
-                        callback(activity);
+                        callback(null, activity);
                     }
                 }
             ],
