@@ -41,7 +41,8 @@ var userSchema = new Schema({
     },
     gender: {
         type: String,
-        required: true
+        required: true,
+        default: 'unknown'
     },
     email: {
         type: String
