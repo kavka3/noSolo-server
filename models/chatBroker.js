@@ -44,9 +44,6 @@ function updateMessageBox(userId, chatId, messageId, callback, messages){
 
 
 var ChatManager = {
-    gotAllUpdate: function(){
-
-    },
     createChatBox: function(userId, chatId, callback){
         MessageBox.find(
             {
@@ -69,6 +66,7 @@ var ChatManager = {
                 else{ callback(null); }
             });
     },
+
     addUserToChat: function(chatId, userId, callbackDone){
         async.waterfall([
             function(callback){
@@ -224,7 +222,7 @@ var ChatManager = {
         }
         else{
             var nfc = notForCreator ? notForCreator : { notForCreator : false, activityCreator: null, notForOthers: false, joinedUser: false };
-            var time = messageTime? messageTime: new Date().getTime();
+            var time = new Date().getTime();
             //console.log('CREATING MESSAGE', messageId, userId, userName, chatId, message, nfc );
             var message = new Message({
                 _id: messageId,
