@@ -1077,14 +1077,13 @@ module.exports = ActivityOperations = {
                         else{ callback(null, createdActivity, activityChat) }
                     })
                 },
-               /* need it for new chat boxes
-
+                //need it for new chat boxes
                function(createdActivity, activityChat, callback){
                     ChatBroker.createChatBox(createdActivity.creator, createdActivity._id, function(err){
                         if(err){callback(err)}
                         else{ callback(null, createdActivity, activityChat) }
                     })
-                },*/
+                },
                 function(createdActivity, activityChat, callback){
                     tryToSave(createdActivity, activityChat, callback);
                 },

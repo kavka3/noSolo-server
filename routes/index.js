@@ -849,7 +849,9 @@ module.exports = function(app){
                 resJson.result = 'success';
                 resJson.data = result;
             }
-            Socket.sendMyActivityUpdate(result._id, { result: 'success', data: result });
+            if(!common.isEmpty(result)){
+                Socket.sendMyActivityUpdate(result._id, { result: 'success', data: result });
+            }
             response.json(resJson);
         });
     });

@@ -6,10 +6,12 @@ var log = require('../lib/log.js')(module),
     Notification = require('./../data/notificationSchema.js'),
     User = connection.model('NoSoloUser'),//User = require('./../data/userSchema.js'),
     UserLocation = require('./../data/userLocationSchema.js'),
+    FB = require('fb'),
     YEARMILLS = 31557600000,//24 * 3600 * 365.25 * 1000,
-    FB = require('fb')
 
-
+    FIELDS_TO_DELETE = ['email', 'firstGeoLogin', 'currentLocation', 'activitiesCreated', 'activitiesLiked', 'activitiesDisliked',
+    'activitiesJoined', 'discoveredActivities', 'uniqueDeviceId', 'notifications', 'lastVisit', 'created', 'lastActivityUrl', 'currentLocation',
+    'fingerPrints']
     ;
 
 
@@ -65,6 +67,15 @@ function exchangeToken(userId, shortToken, callback){
         }
     });
 };
+
+function cutFields(userObj){
+    var copy = common.deepObjClone(userObj);
+    for(var i = 0; i < FIELDS_TO_DELETE.length; i++){
+        delete copy[FIELDS_TO_DELETE[i]];
+    }
+
+    return copy;
+}
 
 module.exports = {
     getAllUsers: function(callback){
@@ -160,7 +171,10 @@ module.exports = {
                             console.error(err);
                             callback(err);
                         }
-                        else{ callback(null, resUser); }
+                        else{
+                            var editedUser = cutFields(resUser);
+                            callback(null, editedUser);
+                        }
                     })
 
                 }/*,
