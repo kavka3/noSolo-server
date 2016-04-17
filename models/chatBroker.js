@@ -182,11 +182,11 @@ var ChatManager = {
                     if(!common.isEmpty(messages)){
                         var lastMessage = messages[messages.length - 1];
                         console.log('messages', messages);
-                        console.log('lastMessage', +lastMessage._id);
+                        console.log('lastMessage', lastMessage._id);
                         console.log('userBox', userBox);
                         MessageBox.findByIdAndUpdate(
                             userBox._id,
-                            { lastMessageId: +lastMessage._id },
+                            { lastMessageId: lastMessage._id },
                             { new: true },
                             function(err, resBox){
                                 if(err){ callback(err); }
