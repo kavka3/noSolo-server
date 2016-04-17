@@ -44,6 +44,9 @@ function updateMessageBox(userId, chatId, messageId, callback, messages){
 
 
 var ChatManager = {
+    gotAllUpdate: function(){
+
+    },
     createChatBox: function(userId, chatId, callback){
         MessageBox.find(
             {
@@ -122,7 +125,10 @@ var ChatManager = {
                                 })
 
                             }
-                            else{ callback(null, resBox[0]); }
+                            else{
+                                console.log('resBox[0]', resBox[0]);
+                                callback(null, resBox[0]);
+                            }
                         })
                 },
                 function(userBox, callback){
@@ -140,7 +146,11 @@ var ChatManager = {
                     if(!common.isEmpty(messageIds)){
                         if(userBox.lastMessageId){
                             var index = messageIds.indexOf(userBox.lastMessageId);
-                            if(index > -1){
+                            if(index == messageIds.length - 1){
+                                //not should to do anything but need to keep this case to prevent bag
+                                var test;
+                            }
+                            else if(index > -1 ){
                                 messagesForSearch = messageIds.slice(index);
                             }
                             else{
@@ -172,12 +182,18 @@ var ChatManager = {
                 function(messages, userBox, callback){
                     if(!common.isEmpty(messages)){
                         var lastMessage = messages[messages.length - 1];
+                        console.log('lastMessage', lastMessage);
+                        console.log('userBox', userBox);
                         MessageBox.findByIdAndUpdate(
                             userBox._id,
                             { lastMessageId: lastMessage._id },
-                            function(err){
+                            { new: true },
+                            function(err, resBox){
                                 if(err){ callback(err); }
-                                else{ callback(null, messages); }
+                                else{
+                                    console.log('resBox', resBox);
+                                    callback(null, messages);
+                                }
                             }
                         )
                     }
