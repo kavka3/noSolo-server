@@ -150,7 +150,7 @@ var ChatManager = {
                                 var test;
                             }
                             else if(index > -1 ){
-                                messagesForSearch = messageIds.slice((index + 1));
+                                messagesForSearch = messageIds.slice((index + 1, messageIds.length));
                             }
                             else{
                                 messagesForSearch = messageIds;
@@ -181,7 +181,7 @@ var ChatManager = {
                 function(messages, userBox, callback){
                     if(!common.isEmpty(messages)){
                         var lastMessage = messages[messages.length - 1];
-                        console.log('messages', messages);
+                        //console.log('messages', messages);
                         console.log('lastMessage', lastMessage._id);
                         console.log('userBox', userBox);
                         MessageBox.findByIdAndUpdate(
