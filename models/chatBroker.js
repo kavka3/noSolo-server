@@ -145,12 +145,12 @@ var ChatManager = {
                         if(userBox.lastMessageId){
                             var index = messageIds.indexOf(userBox.lastMessageId);
                             console.log('chatId, index', chatId, index, messageIds.length - 1);
-                            if(index == messageIds.length - 1){
+                            if(index === messageIds.length - 1){
                                 //not should to do anything but need to keep this case to prevent bag
                                 var test;
                             }
                             else if(index > -1 ){
-                                messagesForSearch = messageIds.slice((index + 1, messageIds.length));
+                                messagesForSearch = messageIds.slice(index + 1, messageIds.length);
                             }
                             else{
                                 messagesForSearch = messageIds;
