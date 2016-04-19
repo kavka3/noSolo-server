@@ -234,7 +234,9 @@ var ChatManager = {
             ],
         function(err, resMessages){
             if(err){
-                log.error(err);
+                if(err != 'No chat found: '){
+                    log.error(err);
+                }
                 callbackRes(null);
             }
             else{ callbackRes(null, resMessages); }
