@@ -106,7 +106,7 @@ var ChatManager = {
         })
     },
 
-    getUnreadMessages: function(chatId, userId, callbackRes){
+    getUnreadMessages: function(chatId, userId, isFirstLoad, callbackRes){
         async.waterfall([
                 function(callback){
                     MessageBox.find({
@@ -124,7 +124,7 @@ var ChatManager = {
 
                             }
                             else{
-                                console.log('resBox[0]', resBox[0]);
+                                //console.log('resBox[0]', resBox[0]);
                                 callback(null, resBox[0]);
                             }
                         })
@@ -141,13 +141,15 @@ var ChatManager = {
                 function(userBox, chat, callback){
                     var messageIds = chat.messages,
                         messagesForSearch = [];
-                    if(!common.isEmpty(messageIds)){
+                    if(isFirstLoad){
+                        messagesForSearch = messageIds;
+                    }
+                    else if(!common.isEmpty(messageIds)){
                         if(userBox.lastMessageId){
                             var index = messageIds.indexOf(userBox.lastMessageId);
                             console.log('chatId, index', chatId, index, messageIds.length - 1);
                             if(index === messageIds.length - 1){
-                                //not should to do anything but need to keep this case to prevent bag
-                                var test;
+                                //not should to do anything but need to keep it
                             }
                             else if(index > -1 ){
                                 messagesForSearch = messageIds.slice(index + 1, messageIds.length);
@@ -182,8 +184,8 @@ var ChatManager = {
                     if(!common.isEmpty(messages)){
                         var lastMessage = messages[messages.length - 1];
                         //console.log('messages', messages);
-                        console.log('lastMessage', lastMessage._id);
-                        console.log('userBox', userBox);
+                        //console.log('lastMessage', lastMessage._id);
+                        //console.log('userBox', userBox);
                         MessageBox.findByIdAndUpdate(
                             userBox._id,
                             { lastMessageId: lastMessage._id },
@@ -191,13 +193,43 @@ var ChatManager = {
                             function(err, resBox){
                                 if(err){ callback(err); }
                                 else{
-                                    console.log('resBox', resBox);
+                                    //console.log('resBox', resBox);
                                     callback(null, messages);
                                 }
                             }
                         )
                     }
                     else{ callback(null, messages); }
+                },
+                function(resMessages, callback){
+                    if(!common.isEmpty(resMessages)){
+                        if(!common.isEmpty(resMessages)){
+                            var finalMessages = [];
+                            for(var i = 0; i < resMessages.length; i++){
+                                var message = resMessages[i];
+                                if(message.notForCreator && message.notForCreator.notForCreator){
+                                    if(message.notForCreator.activityCreator == userId){
+                                        continue;
+                                    }
+                                }
+                                if(message.notForCreator && message.notForCreator.notForOthers){
+                                    if(message.notForCreator.activityCreator != userId){
+                                        continue;
+                                    }
+                                }
+                                if(message.notForCreator && message.notForCreator.joinedUser ){
+                                    if(message.notForCreator.joinedUser == userId){
+                                        continue;
+                                    }
+                                }
+                                finalMessages.push(message);
+                            }
+                            callback(null, finalMessages);
+                        }
+                    }
+                    else{
+                        callback(null, null);
+                    }
                 }
             ],
         function(err, resMessages){
