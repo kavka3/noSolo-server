@@ -169,12 +169,12 @@ var ChatManager = {
                         Message.find(
                             {
                                 _id: {$in: messageIds}
-                            },
-                            function(err, resMessages){
+                            })
+                            .sort({ messageTime: 1 })
+                            .exec( function(err, resMessages){
                                 if(err){ callback(err); }
                                 else{ callback(null, resMessages, userBox) }
-                            }
-                        )
+                            });
                     }
                     else{
                         callback(null,null, userBox);
