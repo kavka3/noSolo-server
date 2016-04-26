@@ -50,7 +50,7 @@ module.exports = mod = {
                     en: {},
                     he: {}
                 };
-                console.log('resdictionary result', resDict);
+                //console.log('resdictionary result', resDict);
                 if(resDict){
                     resDict.forEach(function(e){
                         if(e && e.cmdDictionary && e.cmdDictionary.en){
@@ -94,4 +94,4 @@ module.exports = mod = {
 
 };
 
-mod.getCmdDictionary();
+//mod.getCmdDictionary();
