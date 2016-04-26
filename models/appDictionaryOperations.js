@@ -6,12 +6,13 @@ var log = require('../lib/log.js')(module),
     async = require('async'),
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
-    Dictionary = require('../data/appDictionarySchema.js')
+    Dictionary = require('../data/appDictionarySchema.js'),
+    mod = null
     ;
 
 
 
-module.exports = {
+module.exports = mod = {
 
     update: function(command, callback){
         Dictionary.findByIdAndUpdate(command._id, command, {new: true}, function(err, updatedCommand){
@@ -49,15 +50,20 @@ module.exports = {
                     en: {},
                     he: {}
                 };
-                resDict.forEach(function(e){
-                    if(e.cmdDictionary.en){
-                        langObj['en'][e._id] = e.cmdDictionary.en;
-                    }
-                    if(e.cmdDictionary.he){
-                        langObj['he'][e._id] = e.cmdDictionary.he;
-                    }
-                });
-                callbackDone(null, langObj);
+                console.log('resdictionary result', resDict);
+                if(resDict){
+                    resDict.forEach(function(e){
+                        if(e && e.cmdDictionary && e.cmdDictionary.en){
+                            langObj['en'][e._id] = e.cmdDictionary.en;
+                        }
+                        if(e && e.cmdDictionary && e.cmdDictionary.he){
+                            langObj['he'][e._id] = e.cmdDictionary.he;
+                        }
+                    });
+                }
+                if(callbackDone){
+                    callbackDone(null, langObj);
+                }
 
             }
             else{ callbackDone(new Error('Dictionary is Empty')); }
@@ -86,4 +92,6 @@ module.exports = {
     },
 
 
-}
+};
+
+mod.getCmdDictionary();
