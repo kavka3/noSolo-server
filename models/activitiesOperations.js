@@ -353,7 +353,7 @@ function createInviteMessage(userId, activityId, isParticipant, callbackDone){
             },
             //create message
             function(userLang, resActivity, callback){
-                console.log('create message to invite', isParticipant);
+                //console.log('create message to invite', isParticipant);
                 var commandId = isParticipant? GOING: INTERESTING_IN;
                 var messageComponents = [
                     {commandId: commandId},

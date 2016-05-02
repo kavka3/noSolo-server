@@ -1207,7 +1207,7 @@ module.exports = function(app){
         var isSingle = 1;
         var inviteType = request.body.socialType? request.body.socialType: null;
         if(request.body.isSingle){
-            console.log('invite: ', request.body, request.body.isParticipant);
+            //console.log('invite: ', request.body, request.body.isParticipant);
             isSingle = request.body.isSingle;
         }
         //var stab = 'here will be a pretty smart new message to invite your friends in the activity ';
