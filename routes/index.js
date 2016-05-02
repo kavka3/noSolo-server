@@ -1210,19 +1210,19 @@ module.exports = function(app){
             //console.log('IS Single: ', request.body.isSingle);
             isSingle = request.body.isSingle;
         }
-        //var stab = 'here will be a pretty smart new message to invite your friends in the activity ';
-        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId, isSingle, inviteType,
-            function(err, resLink, resMessage){
+        //var stab = 'here will be a pretty smart new message to invite your friends in the activity '; 
+        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId, 
+            isSingle, inviteType, request.body.isParticipant, function(err, resLink, resMessage){
                 if(err){ log.error(err); response.json({result: 'error', data: err.message }); }
                 else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }
-            })
+            });
     });
 
-    app.post('/testInviteTime', function(req, res){
+  /*  app.post('/testInviteTime', function(req, res){
         Activity.testGetTimeString("2016-03-01T20:00:00.000Z", function(err, res){
             res.send();
         })
-    })
+    })*/
 
     //old version till 04.02.2016
     app.post('//invite', function(request, response){

@@ -64,6 +64,7 @@ var log = require('../lib/log.js')(module),
     GOING = 53,
     AM = 54,
     PM = 55,
+    INTERESTING_IN = 56,
     WHITESPACE = ' ',
 
     NOSOLO_ID = '100009647204771',
@@ -332,7 +333,7 @@ function getTimeComponents(time){
 
 //console.log(getTimeComponents('2016-02-13T12:00:00.189Z'));
 
-function createInviteMessage(userId, activityId, callbackDone){
+function createInviteMessage(userId, activityId, isParticipant, callbackDone){
     async.waterfall([
             //check user language
             function(callback){
@@ -352,8 +353,9 @@ function createInviteMessage(userId, activityId, callbackDone){
             },
             //create message
             function(userLang, resActivity, callback){
+                var commandId = isParticipant? GOING: INTERESTING_IN;
                 var messageComponents = [
-                    {commandId: GOING},
+                    {commandId: commandId},
                     {param: resActivity.title}
                 ];
                 var time = null;
@@ -1148,7 +1150,7 @@ module.exports = ActivityOperations = {
             })
     },
 
-    inviteToActivity: function(link, userId, activityId, isSingle, inviteType, callbackDone){
+    inviteToActivity: function(link, userId, activityId, isSingle, inviteType, isParticipant, callbackDone){
         async.waterfall([
             //create invite
             function(callback){
@@ -1170,7 +1172,7 @@ module.exports = ActivityOperations = {
             },
             //create message
             function(resLink, callback){
-                createInviteMessage(userId, activityId, function(err, resMessage){
+                createInviteMessage(userId, activityId, isParticipant, function(err, resMessage){
                     if(err){ callback(err); }
                     else{ callback(null, resLink, resMessage) }
                 })

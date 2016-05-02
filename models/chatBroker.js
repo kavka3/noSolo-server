@@ -239,7 +239,7 @@ var ChatManager = {
                 }
                 callbackRes(null);
             }
-            else{ callbackRes(null, resMessages); }
+            else{ callbackRes(null, resMessages, false); }
         });
     },
 

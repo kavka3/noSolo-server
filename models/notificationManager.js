@@ -289,6 +289,7 @@ var NotificationManager = {
                         callback(err);
                     }
                     else{
+                        console.log('getDeviceIds', resUsers);
                         var devicesIds = getIds(resUsers);
                         callback(null, devicesIds);
                     }
