@@ -1207,11 +1207,11 @@ module.exports = function(app){
         var isSingle = 1;
         var inviteType = request.body.socialType? request.body.socialType: null;
         if(request.body.isSingle){
-            //console.log('IS Single: ', request.body.isSingle);
+            console.log('invite: ', request.body, request.body.isParticipant);
             isSingle = request.body.isSingle;
         }
-        //var stab = 'here will be a pretty smart new message to invite your friends in the activity '; 
-        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId, 
+        //var stab = 'here will be a pretty smart new message to invite your friends in the activity ';
+        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId,
             isSingle, inviteType, request.body.isParticipant, function(err, resLink, resMessage){
                 if(err){ log.error(err); response.json({result: 'error', data: err.message }); }
                 else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }

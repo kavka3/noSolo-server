@@ -147,7 +147,7 @@ var ChatManager = {
                     else if(!common.isEmpty(messageIds)){
                         if(userBox.lastMessageId){
                             var index = messageIds.indexOf(userBox.lastMessageId);
-                            console.log('chatId, index', chatId, index, messageIds.length - 1);
+                            //console.log('chatId, index', chatId, index, messageIds.length - 1);
                             if(index === messageIds.length - 1){
                                 //not should to do anything but need to keep it
                             }
