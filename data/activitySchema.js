@@ -129,6 +129,10 @@ var activitiesSchema = new Schema({
     }],
     fbId: {
         type: String
+    },
+    formattedAddress: {
+        type: String,
+        default: null
     }
 
 });
