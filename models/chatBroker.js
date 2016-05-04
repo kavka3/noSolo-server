@@ -304,7 +304,9 @@ var ChatManager = {
                                         else{ console.log('support chat updated', resChat._id); }
                                     })
                             }
-                            callback(null, message);
+                            var copy = common.deepObjClone(message);
+                            copy.messageTime = time;
+                            callback(null, copy);
                         }
                     });
                 }
