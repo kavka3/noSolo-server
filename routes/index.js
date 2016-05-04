@@ -1644,7 +1644,9 @@ module.exports = function(app){
             }
             response.send();
         })
-    })
+    });
+
+    app.post('/fb_activities', require('./activity/activityRoute').createFbActivities);
 };
 
 /*

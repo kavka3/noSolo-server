@@ -222,7 +222,9 @@ var ChatManager = {
                                         continue;
                                     }
                                 }
-                                finalMessages.push(message);
+                                var copy = common.deepObjClone(message);
+                                copy.messageTime = new Date(copy.messageTime).getTime();
+                                finalMessages.push(copy);
                             }
                             callback(null, finalMessages);
                         }
