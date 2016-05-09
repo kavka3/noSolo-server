@@ -20,7 +20,7 @@ function createFbActivities(req, res){
         function(callback){
             var allActivities = req.body.activities;
             var userId = req.body.userId;
-            if(!common.isEmpty(allActivities)){
+            if(!common.isEmpty(allActivities) && userId){
                 var existIds = [];
                 var toUpdateIds = [];
                 var toCreate = [];
@@ -84,7 +84,7 @@ function createFbActivities(req, res){
         ,function(err, resActs){
             if(err){
                 console.error(err);
-                res.status(500).send();
+                res.status(500).json({error: err.message});
             }
             else{
                 console.log('fb activities created', resActs);
