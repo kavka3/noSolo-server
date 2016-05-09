@@ -86,10 +86,7 @@ function createFbActivities(req, res){
                 console.error(err);
                 res.status(500).json({error: err.message});
             }
-            else{
-                console.log('fb activities created', resActs);
-                res.json(resActs);
-            }
+            else{ res.json(resActs); }
 
     });
 };

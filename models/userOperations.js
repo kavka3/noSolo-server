@@ -14,69 +14,6 @@ var log = require('../lib/log.js')(module),
     'fingerPrints']
     ;
 
-
-function getMinAge(userBirthday){
-    var age = (Math.round(((Date.now()  - new Date(userBirthday))/YEARMILLS)/2 + 7));
-    return age < 0 ? 0 : age;
-};
-
-function getAge(userBirthday){
-   return  (Math.round((Date.now()  - new Date(userBirthday))/YEARMILLS));
-};
-
-function checkFields(userArgs){
-
-    if(userArgs.hasOwnProperty("_id") && userArgs.hasOwnProperty("socialToken") && userArgs.hasOwnProperty("surname")
-        && userArgs.hasOwnProperty("familyName") ){
-        return true;
-    }
-    else{
-        return false;
-    }
-};
-
-function exchangeToken(userId, shortToken, callback){
-    var clientId = null,
-        clientSecret = null;
-    if(!process.env.FB_CLIENT_ID || !process.env.FB_CLIENT_SECRET){
-        console.log('IN SET FB LOCAL');
-        var config = require('../config/config');
-        clientId = config.fb.clientId;
-        clientSecret = config.fb.clientSecret;
-    }
-    else{
-        clientId = process.env.FB_CLIENT_ID;
-        clientSecret = process.env.FB_CLIENT_SECRET;
-    }
-    FB.api('oauth/access_token', {
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'fb_exchange_token',
-        fb_exchange_token: shortToken
-    }, function (res) {
-        if(!res || res.error) {
-            var resErr = !res ? 'FB error occurred' : res.error;
-            log.error(resErr);
-            callback(resErr)
-        }
-        else{
-            var accessToken = res.access_token;
-            var expires = res.expires ? res.expires : 0;
-            //console.log('FB EXCHANGE SUCCESS', accessToken, expires);
-            callback(null, accessToken, expires);
-        }
-    });
-};
-
-function cutFields(userObj){
-    var copy = common.deepObjClone(userObj);
-    for(var i = 0; i < FIELDS_TO_DELETE.length; i++){
-        delete copy[FIELDS_TO_DELETE[i]];
-    }
-
-    return copy;
-}
-
 module.exports = {
     getAllUsers: function(callback){
        User.find({}, /*'_id surname familyName created',*/ function(err,users){
@@ -85,133 +22,9 @@ module.exports = {
        })
     },
 
-    signIn: function(userArgs, callbackDone){
-        var isSignUp = false;
-        //console.log('Signin fingerprints Component', JSON.stringify(userArgs.fingerPrintComponent));
-        async.waterfall([
-                function(callback){
-                    User.findOne({_id: userArgs._id}, function (err, resUser){
-                        if (err) { callback(err); }
-                        else{
-                            //console.log('FIND USER:', resUser);
-                            callback(null, resUser);
-                        }
-                    })
-                },
-                function(resUser, callback){
-                    if(common.isEmpty(resUser)){
-                        if(checkFields(userArgs)) {
-                            //console.log('USER NOT FOUND: ', resUser);
-                            isSignUp = true;
-                            //var date = new Date(userArgs.birthDate);
-                            //console.log('NEW DATE: ', date);
-                            //userArgs.birthDate = date;
-                            var savingUser = new User(userArgs);
-                            if (!userArgs.preferredAgeMin) {
-                                savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
-                            }
-                            if (!userArgs.preferredAgeMax) {
-                                savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
-                                    getMinAge(userArgs.birthDate);
-                            }
-                            savingUser.radius = 5;
-                            callback(null, savingUser);
-                        }
-                        else{ callback(new Error('not enough fields to signUp')); }
-                    }
-                    else{
-                        //console.log('SENDING OLD USER', resUser);
-                        callback(null, resUser);
-                    }
-                },
-                function(resUser, callback){
-                    //console.log('IN ASK TOKEN', isSignUp);
-                    if(userArgs.isTokenNeeded && userArgs.socialToken && userArgs.socialToken != 'some token'){
-                        exchangeToken(resUser._id, userArgs.socialToken, function(err, longToken, expires){
-                            if(err){ callback(err); }
-                            else{
-                                resUser.socialToken = longToken;
-                                callback(null, resUser);
-                            }
-                        })
-                    }
-                    else{ callback(null, resUser); }
-                },
-            //check fingerprints
-                function(resUser, callback){
-                    //console.log('check finger print:', resUser.fingerPrints, userArgs.currentFingerPrint);
-                    if(userArgs.currentFingerPrint){
-                        if(!resUser.fingerPrints || resUser.fingerPrints.length < 1){
-                            resUser['fingerPrints'] = [];
-                            resUser.fingerPrints.push({
-                                fingerPrint: userArgs.currentFingerPrint,
-                                timeStamp: new Date()
-                            });
-                        }
-                        else{
-                            var search = resUser.fingerPrints.filter(function(e){
-                                return e.fingerPrint == userArgs.currentFingerPrint;
-                            });
-                            if(!search || search.length < 1){
-                                resUser.fingerPrints.push({
-                                        fingerPrint: userArgs.currentFingerPrint,
-                                        timeStamp: new Date()
-                                    });
-                            }
-                        }
-                    }
-                    callback(null, resUser);
-                },
-                function(resUser, callback){
-                    //resUser.fingerPrints = null;
-                    resUser.lastVisit = new Date();
-                    //console.log('Saving user',  resUser);
-                    resUser.save(function(err, resUser){
-                        if(err){
-                            console.error(err);
-                            callback(err);
-                        }
-                        else{
-                            var editedUser = cutFields(resUser);
-                            callback(null, editedUser);
-                        }
-                    })
+    signIn: signIn,
 
-                }/*,
-                 function(resUser, callback){
-                 if(isSignUp){
-                 console.log('WELCOME ACTIVITY CREATING', isSignUp);
-                 var Activity = require('./activitiesOperations.js');
-                 Activity.createWelcomeActivity(resUser._id, resUser.systemLanguage);
-                 callback(null, resUser);
-                 }
-                 else{
-                 callback(null, resUser);
-                 }
-                 }*/
-            ],
-            function(err, resUser){
-                if(err){
-                    log.error('SIGNIN ERROR: ', err);
-                    callbackDone(err);
-                }
-                else{
-                    log.info('User logged: ' + resUser._id);
-                    callbackDone(null, resUser, isSignUp);
-                }
-            });
-        //callbackDone(new Error('Temporary closed:)'))
-    },
-
-    findUser: function(userId, callback) {
-        User.findById(userId, function (err, result) {
-            if (err) {
-                log.error(err);
-                callback(err);
-            }
-            else{ callback(null, result); }
-        });
-    },
+    findUser: findUser,
 
     deleteUser: function(userId, callback){
         User.findById(userId, function(err, user) {
@@ -355,6 +168,77 @@ module.exports = {
     createFbUser: createFbUser
 };
 
+function getMinAge(userBirthday){
+    var age = (Math.round(((Date.now()  - new Date(userBirthday))/YEARMILLS)/2 + 7));
+    return age < 0 ? 0 : age;
+};
+
+function getAge(userBirthday){
+    return  (Math.round((Date.now()  - new Date(userBirthday))/YEARMILLS));
+};
+
+function checkFields(userArgs){
+    if(userArgs.hasOwnProperty("_id") && userArgs.hasOwnProperty("socialToken") && userArgs.hasOwnProperty("surname")
+        && userArgs.hasOwnProperty("familyName") ){
+        return true;
+    }
+    else{
+        return false;
+    }
+};
+
+function mergeUserModels(resUser, userObj){
+    resUser.isFake = false;
+    resUser.surname = userObj.surname;
+    resUser.familyName = userObj.familyName;
+    resUser.socialToken = userObj.socialToken;
+    resUser.birthDate = userObj.birthDate;
+    resUser.gender = userObj.gender;
+    resUser.about = userObj.about;
+};
+
+function exchangeToken(userId, shortToken, callback){
+    var clientId = null,
+        clientSecret = null;
+    if(!process.env.FB_CLIENT_ID || !process.env.FB_CLIENT_SECRET){
+        console.log('IN SET FB LOCAL');
+        var config = require('../config/config');
+        clientId = config.fb.clientId;
+        clientSecret = config.fb.clientSecret;
+    }
+    else{
+        clientId = process.env.FB_CLIENT_ID;
+        clientSecret = process.env.FB_CLIENT_SECRET;
+    }
+    FB.api('oauth/access_token', {
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'fb_exchange_token',
+        fb_exchange_token: shortToken
+    }, function (res) {
+        if(!res || res.error) {
+            var resErr = !res ? 'FB error occurred' : res.error;
+            log.error(resErr);
+            callback(resErr)
+        }
+        else{
+            var accessToken = res.access_token;
+            var expires = res.expires ? res.expires : 0;
+            //console.log('FB EXCHANGE SUCCESS', accessToken, expires);
+            callback(null, accessToken, expires);
+        }
+    });
+};
+
+function cutFields(userObj){
+    var copy = common.deepObjClone(userObj);
+    for(var i = 0; i < FIELDS_TO_DELETE.length; i++){
+        delete copy[FIELDS_TO_DELETE[i]];
+    }
+
+    return copy;
+};
+
 function createFbUser(user, origin, callback){
     var fakeDate = new Date();
     var imageUrl = 'http://graph.facebook.com/'+ user._id + '/picture?width=100&height=100';
@@ -373,6 +257,117 @@ function createFbUser(user, origin, callback){
         if(err){ callback(err); }
         else{ callback(null, resUser); }
     })
+};
+
+function findUser(userId, callback) {
+    User.findById(userId, function (err, result) {
+        if (err) {
+            log.error(err);
+            callback(err);
+        }
+        else{ callback(null, result); }
+    });
+};
+
+function signIn(userArgs, callbackDone){
+    var isSignUp = false;
+    async.waterfall([
+            function(callback){
+                User.findOne({_id: userArgs._id}, function (err, resUser){
+                    if (err) { callback(err); }
+                    else{ callback(null, resUser); }
+                })
+            },
+            function(resUser, callback){
+                if(common.isEmpty(resUser)){
+                    if(checkFields(userArgs)) {
+                        isSignUp = true;
+                        var savingUser = new User(userArgs);
+                        if (!userArgs.preferredAgeMin) {
+                            savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
+                        }
+                        if (!userArgs.preferredAgeMax) {
+                            savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
+                                getMinAge(userArgs.birthDate);
+                        }
+                        savingUser.radius = 5;
+                        callback(null, savingUser);
+                    }
+                    else{ callback(new Error('not enough fields to signUp')); }
+                }
+                else if(resUser.isFake){
+                    if(checkFields(userArgs)){
+                        mergeUserModels(resUser, userArgs);
+                        callback(null, resUser);
+                    }
+                    else{ callback(new Error('not enough fields to signUp')); }
+                }
+                else{
+                    callback(null, resUser);
+                }
+            },
+            function(resUser, callback){
+                if(userArgs.isTokenNeeded && userArgs.socialToken && userArgs.socialToken != 'some token'){
+                    exchangeToken(resUser._id, userArgs.socialToken, function(err, longToken, expires){
+                        if(err){ callback(err); }
+                        else{
+                            resUser.socialToken = longToken;
+                            callback(null, resUser);
+                        }
+                    })
+                }
+                else{ callback(null, resUser); }
+            },
+            //check fingerprints
+            function(resUser, callback){
+                if(userArgs.currentFingerPrint){
+                    if(!resUser.fingerPrints || resUser.fingerPrints.length < 1){
+                        resUser['fingerPrints'] = [];
+                        resUser.fingerPrints.push({
+                            fingerPrint: userArgs.currentFingerPrint,
+                            timeStamp: new Date()
+                        });
+                    }
+                    else{
+                        var search = resUser.fingerPrints.filter(function(e){
+                            return e.fingerPrint == userArgs.currentFingerPrint;
+                        });
+                        if(!search || search.length < 1){
+                            resUser.fingerPrints.push({
+                                fingerPrint: userArgs.currentFingerPrint,
+                                timeStamp: new Date()
+                            });
+                        }
+                    }
+                }
+                callback(null, resUser);
+            },
+            function(resUser, callback){
+                resUser.lastVisit = new Date();
+                resUser.save(function(err, resUser){
+                    if(err){
+                        console.error(err);
+                        callback(err);
+                    }
+                    else{
+                        var editedUser = cutFields(resUser);
+                        callback(null, editedUser);
+                    }
+                })
+
+            }
+        ],
+        function(err, resUser){
+            if(err){
+                log.error('SIGNIN ERROR: ', err);
+                callbackDone(err);
+            }
+            else{
+                log.info('User logged: ' + resUser._id);
+                callbackDone(null, resUser, isSignUp);
+            }
+        });
+
 };
 
 
