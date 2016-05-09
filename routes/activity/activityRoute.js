@@ -138,7 +138,8 @@ function createIterator(userId, resActs, toCreate, callbackCI){
                     timeFinish: toCreate.timeFinish,
                     fbId: toCreate.fbId,
                     description: toCreate.description,
-                    maxMembers: toCreate.maxMembers
+                    maxMembers: toCreate.maxMembers,
+                    formattedAddress: toCreate.formattedAddress
                 };
                 activityModel.createActivity(newActivity, false, true, function(err, createdAct){
                     if(err){ callback(err); }
