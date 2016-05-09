@@ -209,13 +209,7 @@ module.exports = {
                 log.error(err);
                 callback(err);
             }
-            if(result == null || result.length == 0){
-                log.info('user is not found');
-                callback(null,'user is not found');
-            }
-            else{
-                callback(null, result);
-            }
+            else{ callback(null, result); }
         });
     },
 
@@ -356,54 +350,32 @@ module.exports = {
             if(err){callbackDone(err); }
             else{ callbackDone(null, resUsers); }
         })
-    }
+    },
+
+    createFbUser: createFbUser
 };
 
-function checkPass(pass, hash){
-    return crypt.compareSync(pass, hash);
+function createFbUser(user, origin, callback){
+    var fakeDate = new Date();
+    var imageUrl = 'http://graph.facebook.com/'+ user._id + '/picture?width=100&height=100';
+    fakeDate.setFullYear(1970);
+    var newUser = new User({
+        _id: user._id,
+        surname: user.name,
+        familyName: ' ',
+        birthDate: fakeDate,
+        gender: 'other',
+        imageUrl: imageUrl,
+        isFake: true,
+        origin: origin
+    });
+    newUser.save(function(err, resUser){
+        if(err){ callback(err); }
+        else{ callback(null, resUser); }
+    })
 };
 
-/*
-old version of signin
-User.findOne({_id: userArgs._id}, function (err, result) {
-    if (err) {
-        log.error(err);
-        callback(err);
-    }
-    if(common.isEmpty(result)){
-        if(checkFields(userArgs)){
-            var savingUser = new User(userArgs);
-            if(!userArgs.preferredAgeMin){
-                savingUser.preferredAgeMin = getMinAge(userArgs.birthDate);
-            }
-            if(!userArgs.preferredAgeMax){
-                savingUser.preferredAgeMax = getAge(userArgs.birthDate) + getAge(userArgs.birthDate) -
-                    getMinAge(userArgs.birthDate);
-            }
-            savingUser.save(function(err, savingUser, affected){
-                if (err) {
-                    log.error(err.message);
-                    callback(err);
-                }
-                else{
-                    log.info('new user created: ' + savingUser._id);
-                    callback(null, savingUser);
-                }
-            })
-        }
-        else{
-            log.error('not enough fields to signUp: ' + userArgs._id);
-            callback(new Error('not enough fields to signUp'));
-        }
 
-    }
-    else{
-        result.lastVisit = new Date();
-        result.save(function(err){ if(err){log.error(err)} });
-        log.info('user logged: ' + result._id);
-        callback(null, result);
-    }
-});*/
 
 
 

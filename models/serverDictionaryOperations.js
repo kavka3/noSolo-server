@@ -82,7 +82,7 @@ module.exports = {
                     command: ctrlCommand,
                     cmdDictionary: cmdDict
                 });
-        console.log('NEW SERVER COMMAND', newCommand);
+        //console.log('NEW SERVER COMMAND', newCommand);
         newCommand.save(function(err, resCmd){
             if(err){ callbackDone(err); }
             else{ callbackDone(null, resCmd) }

@@ -158,15 +158,14 @@ var userSchema = new Schema({
     },
     fingerPrints: [{
         type: Schema.Types.Mixed
-    }]
-/*{
-    fingerPrint: {
-        type: String
+    }],
+    isFake:{
+       type: Boolean
     },
-    timeStamp: {
-        type: Date
+    origin:{
+        type: String
     }
-}*/
+
 });
 
 //userSchema.plugin(autoIncrement.plugin, 'NoSoloUser');

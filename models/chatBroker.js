@@ -296,9 +296,7 @@ var ChatManager = {
                             log.info('message saved: ' + message.messageText);
                             //console.log('chat params', result);
                             if(result.crm.isSupport && message.creator != NOSOLO_CHAT){
-                                /*var changedCrm = result.crm;
-                                changedCrm.isSeen = false;*/
-                                Chat.findByIdAndUpdate(chatId, { $set: { 'crm.$.isSeen' : false } }, {new: true},
+                                Chat.findByIdAndUpdate(chatId, { $set: { 'crm.isSeen' : false } }, {new: true},
                                     function(err, resChat){
                                         if(err){ log.error(err); }
                                         else{ console.log('support chat updated', resChat._id); }

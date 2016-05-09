@@ -79,7 +79,7 @@ function discoverActivity(userId, long, lat, response){
             resJson.data = err.message;
             response.json(resJson);
         }
-        else if(foundedUser == 'user is not found') {
+        else if(common.isEmpty(foundedUser)) {
             resJson.result = 'error';
             resJson.data = 'user is not found';
             response.json(resJson);
@@ -557,7 +557,7 @@ module.exports = function(app){
         var resJson = {};
         var activityObj = checkActivityFields(request.body);
         if(activityObj.result != 'error'){
-            Activity.createActivity(activityObj, false, function(err, result){
+            Activity.createActivity(activityObj, false, false, function(err, result){
                 if(err){
                     resJson.result = 'error';
                     resJson.data = err.message;//may be damaged from tagsOperations 28
@@ -1218,27 +1218,7 @@ module.exports = function(app){
             });
     });
 
-  /*  app.post('/testInviteTime', function(req, res){
-        Activity.testGetTimeString("2016-03-01T20:00:00.000Z", function(err, res){
-            res.send();
-        })
-    })*/
-
-    //old version till 04.02.2016
-    app.post('//invite', function(request, response){
-        var isSingle = 1;
-        if(request.body.isSingle){
-            console.log('IS Single: ', request.body.isSingle);
-            isSingle = request.body.isSingle;
-        }
-        Activity.inviteToActivityOld(request.body.creator, request.body.activityId, isSingle,
-            function(err, inviteId){
-                if(err){ log.error(err); response.json({result: 'error', data: error.message }); }
-                else{ response.json({ result: 'success', data: inviteId }); }
-            })
-    });
-
-    app.post('//accept_invite', function(request, response){
+   app.post('//accept_invite', function(request, response){
         Activity.acceptInvite(request.body.inviteId, /*request.body.userId,*/
             function(err){
                 if(err){ response.json({ result: 'error', data: err.message}); }
@@ -1503,7 +1483,7 @@ module.exports = function(app){
             });
         });
 
-    app.get('/support_chats', function(request, response){
+ /*   app.get('/support_chats', function(request, response){
         var result = {
             result: 'success',
             data: []
@@ -1519,7 +1499,7 @@ module.exports = function(app){
             }
             response.json(result);
         })
-    });
+    });*/
 
     app.post('/support_chat', function(request, response){
         ChatBroker.updateSupportChat(request.body.chatId);
@@ -1529,7 +1509,7 @@ module.exports = function(app){
     app.post('/admin_chat', function(request, response){
         async.waterfall([
                 function(callback){
-                    Activity.createWelcomeActivity(request.body.userId,request.body.userLang, request.body.adminId, request.body.title, request.body.description
+                    Activity.createWelcomeActivity(request.body.userId, request.body.userLang, request.body.adminId, request.body.title, request.body.description
                         , request.body.imageUrl, request.body.location, true, function(err, resActivity){
                             if(err){ callback(err); }
                             else{ callback(null, resActivity); }

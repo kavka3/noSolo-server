@@ -79,8 +79,8 @@ var server = http.createServer(app);
 server.listen(app.get('port'), function(){
     log.info('Express server listening on port ' + app.get('port'));
 });
-/*var socket =*/ require('./lib/socket.js').socketObj(server);
-//socket.socketObj(server);
+var socket = require('./lib/socket.js');
+socket.socketObj(server);
 
 
 notify = require('./models/notificationManager.js');

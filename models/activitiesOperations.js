@@ -408,7 +408,7 @@ function recurActs(activity, daysToRepeat){
                 recurAct.timeStart = startTime;
                 recurAct.timeFinish = finishTime;
 
-                ActivityOperations.createActivity(recurAct, false, function(err, resAct){
+                ActivityOperations.createActivity(recurAct, false, false, function(err, resAct){
                     if(err){
                         console.error(err);
                         callback(err);
@@ -849,7 +849,7 @@ module.exports = ActivityOperations = {
                     }
                     activityObj.isRecur = true;
                     delete activityObj.created;
-                    ActivityOperations.createActivity(activityObj, function(err, newActivity){
+                    ActivityOperations.createActivity(activityObj, false,false, function(err, newActivity){
                         if(err){ callback(err); }
                         else{
                             log.info('activity created: ' + newActivity._id);
@@ -925,7 +925,7 @@ module.exports = ActivityOperations = {
         //create activity
         activityObj['isRecur'] = true;
 
-        ActivityOperations.createActivity(activityObj, false, function(err, resAct){
+        ActivityOperations.createActivity(activityObj, false, false, function(err, resAct){
             if(err){ callbackDone(err); }
             else{
                 if(!common.isEmpty(daysToRepeat)){
@@ -1039,7 +1039,7 @@ module.exports = ActivityOperations = {
     },
 
     //creates activity,activity chat, updates creator and tags: adds activity, returns created
-    createActivity: function(activity, isWelcome, callbackDone){
+    createActivity: function(activity, isWelcome, isFb, callbackDone){
         //counting attempts to save activity
         var attemptToSave = 0;
         function tryToSave(createdActivity, activityChat, callback){
@@ -1196,17 +1196,6 @@ module.exports = ActivityOperations = {
 
     },
 
-    //old version till 04.02.2016
-    inviteToActivityOld: function(userId, activityId, isSingle, callbackDone){
-        var inviteObj = {creator: userId, activity: activityId };
-        if(isSingle != 1){ inviteObj['isSingle'] = isSingle; }
-        var invite = new Invite(inviteObj);
-        invite.save(function(err, inviteRes){
-            if(err){callbackDone(err); }
-            else{ console.log('INVITE SAVED: ', inviteRes);callbackDone(null, inviteRes._id); }
-        })
-    },
-
     acceptInvite: function(inviteId, /*userId, */callbackDone){
         async.waterfall([
                 function(callback){
@@ -1304,7 +1293,7 @@ module.exports = ActivityOperations = {
                         maxMembers: 2,
                         isPrivate: true
                     };
-                    ActivityOperations.createActivity(welcomeActivity, true, function(err, resAct){
+                    ActivityOperations.createActivity(welcomeActivity, true, false, function(err, resAct){
                         if(err){
                             log.error(err);
                             callback(err);
@@ -1345,6 +1334,10 @@ module.exports = ActivityOperations = {
                             var finalMessage = commandDictionary[checkedLang][WELCOME_ACTIVITY_MESSAGE];
                             Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, finalMessage);
                         }, 2000);
+                    }
+                    else{
+                        //TODO add user in chat and activity to app if user in app at this moment
+                        Socket.addToChat(creatorId, resAct._id);
                     }
                     callback(null, resAct, resUser)
                 }
