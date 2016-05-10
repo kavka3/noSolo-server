@@ -156,11 +156,17 @@ function createIterator(userId, resActs, toCreate, callbackCI){
                         });
                 }
                 else{ callback(null, activity); }
+            },
+            //check if need to add activity to response
+            function(activity, callback){
+                if(userId == toCreate.creator._id && toCreate.isGoing){
+                    resActs.push(activity);
+                }
+                callback(null);
             }
         ]
         ,function(err, activity){
             if(err){ console.error(err); }
-            else{ resActs.push(activity); }
             callbackCI(null);
         })
 };
