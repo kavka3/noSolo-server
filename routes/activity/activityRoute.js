@@ -159,7 +159,7 @@ function createIterator(userId, resActs, toCreate, callbackCI){
             },
             //check if need to add activity to response
             function(activity, callback){
-                if(userId == toCreate.creator._id && toCreate.isGoing){
+                if(userId == toCreate.creator._id || toCreate.isGoing){
                     resActs.push(activity);
                 }
                 callback(null);
