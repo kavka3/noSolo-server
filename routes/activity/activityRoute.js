@@ -148,7 +148,7 @@ function createIterator(userId, resActs, toCreate, callbackCI){
             },
             //add user in if necessary
             function(activity, callback){
-                if(toCreate.isGoing){
+                if(toCreate.isGoing && userId != toCreate.creator._id){
                     NotificationOperations.joinApprove(null, userId, activity._id, null,
                         function(err, changed){
                             if(err){ callback(err); }
