@@ -1,8 +1,7 @@
 
 //GLOBAL VARIABLES AND CONSTANTS
 {
-    var log = require('../lib/log.js')(module),
-        async = require('async'),
+    var async = require('async'),
         common = require('../lib/commonFunctions.js'),
         Chat = require('../data/chatSchema.js'),
         Activity = require('../data/activitySchema.js'),
@@ -76,182 +75,173 @@ module.exports = {
     userIn: userIn,
     prepareToUpdate: prepareToUpdate,
     getMyActivities: getMyActivities,
-    //search by any criteria return activity array
     universalActivitySearch: universalActivitySearch,
-    //changes any criteria in existing activity, !not working with arrays now!
-    universalActivityUpdate: function(activityObj, callback){
-        Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true})
-            .populate('creator', CREATOR_FIELDS)
-            .populate('joinedUsers', JOINED_USERS_FIELDS)
-            .populate('followingUsers', JOINED_USERS_FIELDS)
-            .populate('tags', TAG_FIELDS)
-            .exec(function(err, resAct){
+    //changes any criteria in existing activity, !but not working with arrays now!
+    universalActivityUpdate: universalActivityUpdate,
+    updateImage: updateImage,
+    discover: discover,
+    removeUserFromActivity: removeUserFromActivity,
+    deleteActivity: deleteActivity,
+    findActivity: findActivity,
+    createActivity: createActivity,
+    inviteToActivity: inviteToActivity,
+    acceptInvite: acceptInvite
+};
+
+(function checkDictionary(){
+    if(common.isEmpty(commandDictionary)){
+        var serverCommands = require('./serverDictionaryOperations.js');
+        serverCommands.getDictionary(function(err, resDict){
+            if(err){ console.error(err); }
+            else{
+                commandDictionary = resDict;
+            }
+        })
+    }
+}());
+
+function findActivity(activityId, callback) {
+    Activity.findById(activityId, function (err, resActivity) {
+        if (err) {
+            console.error(err);
+            callback(err);
+        }
+        else if (resActivity == null || resActivity.length == 0) {
+            callback(new Error('Activity not found: ' + activityId));
+        }
+        else {
+            callback(null, resActivity);
+        }
+
+    })
+};
+
+function deleteActivity(activityId, callback) {
+    var query = Activity
+        .find({_id: activityId})
+        .populate('creator', '_id surname')
+        ;
+    query.exec(function (err, result) {
+        if (err) { callback(err); }
+        if (result == null || result.length == 0) {
+            callback(new Error('Activity is not found'));
+        }
+        else {
+            Activity.findById(activityId, function (err, resAct) {
                 if (err) { callback(err); }
-                else if(common.isEmpty(resAct)){
-                    callback(new Error('activity not found'));
+                else if (!common.isEmpty(resAct)) {
+                    resAct.remove(function (err, res) {
+                        if (err) { callback(err); }
+                        else {
+                            Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator.surname);
+                            common.deleteReminder(activityId, function (err, res){/*no need any actions here*/});
+                            callback(null);
+                        }
+                    })
                 }
-                else{
-                    var activityClone = common.deepObjClone(resAct);
-                    activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
-                    sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
-                    callback(null, activityClone);
-                }
-            })
-    },
-    updateImage: function(activity, callback){
-        var activityObj = common.deepObjClone(activity);
-        delete activityObj._id;
-        if(activityObj.creator){ activityObj.creator = activity.creator._id; }
-        Activity.findByIdAndUpdate(activity._id, activityObj, {upsert: true, new: true})
-            .populate('creator', CREATOR_FIELDS)
-            .populate('joinedUsers', JOINED_USERS_FIELDS)
-            .populate('followingUsers', JOINED_USERS_FIELDS)
-            .populate('tags', TAG_FIELDS)
-            .exec(function(err, resAct){
-                if (err) {
-                    log.error(err);
-                    callback(err);
-                }
-                else if(common.isEmpty(resAct)){
-                    log.info('activity is not found');
-                    callback(null, 'activity is not found');
-                }
-                else{
-                    //Notify.changeActivityNotify(resAct, activityObj['changedField'], activityObj['creatorName']);
-                    var activityClone = common.deepObjClone(resAct);
-                    activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
-                    sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
-                    callback(null, activityClone);
-                }
-            })
-    },
-    discover : discover,
-    //remove user from activity and chat change user fields
-    removeUserFromActivity: function(activityId, userId, isRemove, callbackDone){
-        async.waterfall([
-                function(callback){
-                    Activity.findByIdAndUpdate(activityId,
-                        {
-                            $pull: {
-                                joinedUsers: userId,
-                                activitiesLiked: { activityId: activityId },
-                                followingUsers: userId
-                            }
-                        }, { new: true })
-                        .populate('creator', CREATOR_FIELDS)
-                        .populate('joinedUsers', JOINED_USERS_FIELDS)
-                        .populate('followingUsers', JOINED_USERS_FIELDS)
-                        .exec(function(err, activity){
-                                if(err){ callback(err); }
-                                else if(common.isEmpty(activity)){ callback(new Error('Activity not found')); }
-                                else{ callback(null, activity); }
-                            })
-                },
-                function(activity, callback){
-                    Chat.findByIdAndUpdate(activityId, {$pull: { usersInChat: userId } },  {new: true},
-                        function(err, chat){
-                            if(err){ callback(err); }
-                            else{ callback(null, activity); }
-                        })
-                },
-                function(activity, callback){
-                    User.findByIdAndUpdate(userId, {$pull:{ activitiesJoined: mongoose.Types.ObjectId(activityId) } },
-                        {new: true}, function(err, changedUser){
-                            if (err){ callback(err); }
-                            else{
-                                Socket.removeFromChat(userId, activityId);
-                                Notify.leaveActivity(activity, changedUser);
-                                callback(null, activity, changedUser);
-                            }
-                        });
-                },
-                function(activity, user, callback){
-                    common.removeUserFromTask(activity._id, user._id);
-                    callback(null, activity, user);
-                },
-                function(activity, user, callback){
-                    if(isRemove){
-                        Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date(),
-                        function(){
+            });
+        }
+    });
+};
+
+function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
+    async.waterfall([
+            function (callback) {
+                Activity.findByIdAndUpdate(activityId,
+                    {
+                        $pull: {
+                            joinedUsers: userId,
+                            activitiesLiked: {activityId: activityId},
+                            followingUsers: userId
+                        }
+                    }, {new: true})
+                    .populate('creator', CREATOR_FIELDS)
+                    .populate('joinedUsers', JOINED_USERS_FIELDS)
+                    .populate('followingUsers', JOINED_USERS_FIELDS)
+                    .exec(function (err, activity) {
+                        if (err) {
+                            callback(err);
+                        }
+                        else if (common.isEmpty(activity)) {
+                            callback(new Error('Activity not found'));
+                        }
+                        else {
+                            callback(null, activity);
+                        }
+                    })
+            },
+            function (activity, callback) {
+                Chat.findByIdAndUpdate(activityId, {$pull: {usersInChat: userId}}, {new: true},
+                    function (err, chat) {
+                        if (err) {
+                            callback(err);
+                        }
+                        else {
+                            callback(null, activity);
+                        }
+                    })
+            },
+            function (activity, callback) {
+                User.findByIdAndUpdate(userId, {$pull: {activitiesJoined: mongoose.Types.ObjectId(activityId)}},
+                    {new: true}, function (err, changedUser) {
+                        if (err) {
+                            callback(err);
+                        }
+                        else {
+                            Socket.removeFromChat(userId, activityId);
+                            Notify.leaveActivity(activity, changedUser);
+                            callback(null, activity, changedUser);
+                        }
+                    });
+            },
+            function (activity, user, callback) {
+                common.removeUserFromTask(activity._id, user._id);
+                callback(null, activity, user);
+            },
+            function (activity, user, callback) {
+                if (isRemove) {
+                    Socket.sendMyActivityLeave(userId, activity._id, activity.title, activity.creator, new Date(),
+                        function () {
                             callback(null, activity, user);
                         });
-                    }
-                    else{
-                        callback(null, activity);
-                    }
                 }
-            ],
-            function(err, activity){
-                if(err){ callbackDone(err); }
-                else{ callbackDone(null, activity); }
-            })
-    },
-    //delete in cascade style: with activity userFields, chat and tags;
-    deleteActivity: function(activityId, callback){
-        var query = Activity
-                .find({_id: activityId })
-                .populate('creator', '_id surname')
-            ;
-        query.exec(function(err, result){
-            if (err) {
-                log.error(err);
-                callback(err);
+                else { callback(null, activity); }
             }
-            if (result == null || result.length == 0) {
-                log.error('Activity is not found');
-                callback(new Error('Activity is not found'));
-            }
-            else {
-                Activity.findById(activityId, function(err, resAct) {
-                    if (err){
-                        log.error(err);
-                        callback(err);
-                    }
-                    else if(!common.isEmpty(resAct)){
-                        resAct.remove(function(err, res){
-                            if(err){
-                                log.error(err);
-                                callback(err);
-                            }
-                            else{
-                                log.info('activity found and deleted: ' + result[0]._id);
-                                Socket.chatClosed(activityId, result[0].joinedUsers, result[0].creator._id, result[0].title, result[0].creator.surname);
-                                common.deleteReminder(activityId, function(err, res){});
-                                log.info('activity deleted');
-                                callback(null);
-                            }
-                        })
-                    }
-                });
-            }
-        });
-    },
-    findActivity: function(activityId, callback){
-        Activity.findById(activityId, function(err, resActivity){
-            if(err){
-                log.error(err);
-                callback(err);
-            }
-            else if(resActivity == null || resActivity.length == 0){
-                log.error('Activity not found: ' + activityId);
-                callback(new Error('Activity not found: ' + activityId));
-            }
-            else{
-                callback(null, resActivity);
-            }
+        ],
+        function (err, activity) {
+            if (err) { callbackDone(err); }
+            else { callbackDone(null, activity); }
+        })
+};
 
+function acceptInvite(inviteId, callbackDone){
+    async.waterfall([
+            function(callback){
+                Invite.findById(inviteId, function(err, invite){
+                    if(err){ callback(err); }
+                    else if(common.isEmpty(invite)){ callback(new Error('Invite not found')); }
+                    else{ callback(null, invite); }
+                })
+            },
+            function(invite, callback){
+                if(invite.isSingle){
+                    invite.isDone = true;
+                    invite.save(function(err, result){
+                        if(err){callback(err); }
+                        else{ callback(null); }
+                    })
+                }
+                else{ callback(null);}
+            }
+        ],
+        function(err){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null); }
         })
-    },
-    getAllActivities: function(callback){
-        Activity.find({},function(err, activityIds){
-            if(err){ callback(err) }
-            else{ callback(null, activityIds); }
-        })
-    },
-    //creates activity,activity chat, updates creator and tags: adds activity, returns created
-    createActivity: createActivity,
-    inviteToActivity: function(link, userId, activityId, isSingle, inviteType, isParticipant, callbackDone){
-        async.waterfall([
+};
+
+function inviteToActivity(link, userId, activityId, isSingle, inviteType, isParticipant, callbackDone){
+    async.waterfall([
             //create invite
             function(callback){
                 var inviteObj = {creator: userId, activity: activityId, inviteType:inviteType };
@@ -259,7 +249,7 @@ module.exports = {
                 var invite = new Invite(inviteObj);
                 invite.save(function(err, inviteRes){
                     if(err){callback(err); }
-                    else{ console.log('INVITE SAVED: ', inviteRes);callback(null, inviteRes._id); }
+                    else{ callback(null, inviteRes._id); }
                 })
             },
             //tinify link
@@ -279,104 +269,57 @@ module.exports = {
             }
         ],
         function(err, resLink, resMessage){
-            if(err){
-                console.error(err);
-                callbackDone(err);
-            }
-            else{
-                console.log('invite link minified', resLink, resMessage);
-                callbackDone(null, resLink, resMessage);
-            }
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resLink, resMessage); }
         });
 
-    },
-    acceptInvite: function(inviteId, /*userId, */callbackDone){
-        async.waterfall([
-                function(callback){
-                    Invite.findById(inviteId, function(err, invite){
-                        if(err){ callback(err); }
-                        else if(common.isEmpty(invite)){ callback(new Error('Invite not found')); }
-                        else{ callback(null, invite); }
-                    })
-                },
-                /*function(invite, callback){
-                 if(!invite.isDone){
-                 Notify.joinApprove(null, userId
-                 , invite.activity, null, function(err){
-                 if(err){ callback(err) }
-                 else{ callback(null, invite); }
-                 });
-                 }
-                 else{ callback(new Error('Invite already closed')); }
-
-                 },*/
-                function(invite, callback){
-                    if(invite.isSingle){
-                        invite.isDone = true;
-                        invite.save(function(err, result){
-                            if(err){callback(err); }
-                            else{ callback(null); }
-                        })
-                    }
-                    else{ callback(null);}
-                }
-            ],
-            function(err){
-                if(err){
-                    log.error(err);
-                    callbackDone(err);
-                }
-                else{
-                    log.info('Invite processed');
-                    callbackDone(null);
-                }
-            })
-    },
-    removeUserActivities: function(userId, callbackDone){
-        async.waterfall([
-                function(callback){
-                    Activity.find({creator: userId}, function(err, resActs){
-                        if(err){ callback(err); }
-                        else{ callback(null, resActs); }
-                    })
-                },
-                function(resActs, callback){
-                    async.eachSeries(resActs, function(activity, callbackEach){
-                        ActivityOperations.deleteActivity(activity._id, function(err){
-                            if(err){ callbackEach(err); }
-                            else{ callbackEach(null); }
-                        },
-                            function(err){
-                                if(err){ callback(err); }
-                                else{ callback(null); }
-                            }
-                        )
-                    })
-                }
-
-            ],
-            function(err){
-                if(err){
-                    log.error(err);
-                    callbackDone(err);
-                }
-                else{ callbackDone(null); }
-            })
-    }
 };
 
-(function checkDictionary(){
-    if(common.isEmpty(commandDictionary)){
-        var serverCommands = require('./serverDictionaryOperations.js');
-        serverCommands.getDictionary(function(err, resDict){
-            if(err){ log.error(err); }
+function updateImage(activity, callback){
+    var activityObj = common.deepObjClone(activity);
+    delete activityObj._id;
+    if(activityObj.creator){ activityObj.creator = activity.creator._id; }
+    Activity.findByIdAndUpdate(activity._id, activityObj, {upsert: true, new: true})
+        .populate('creator', CREATOR_FIELDS)
+        .populate('joinedUsers', JOINED_USERS_FIELDS)
+        .populate('followingUsers', JOINED_USERS_FIELDS)
+        .populate('tags', TAG_FIELDS)
+        .exec(function(err, resAct){
+            if (err) {
+                console.error(err);
+                callback(err);
+            }
+            else if(common.isEmpty(resAct)){
+                callback(new Error('activity is not found'));
+            }
             else{
-                commandDictionary = resDict;
-                console.log('GOT dictionary in activity operations'/*, commandDictionary*/);
+                var activityClone = common.deepObjClone(resAct);
+                activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
+                sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                callback(null, activityClone);
+            }
+        });
+};
+
+function universalActivityUpdate(activityObj, callback){
+    Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true})
+        .populate('creator', CREATOR_FIELDS)
+        .populate('joinedUsers', JOINED_USERS_FIELDS)
+        .populate('followingUsers', JOINED_USERS_FIELDS)
+        .populate('tags', TAG_FIELDS)
+        .exec(function(err, resAct){
+            if (err) { callback(err); }
+            else if(common.isEmpty(resAct)){
+                callback(new Error('activity not found'));
+            }
+            else{
+                var activityClone = common.deepObjClone(resAct);
+                activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
+                sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                callback(null, activityClone);
             }
         })
-    }
-}());
+};
 
 function getMyActivities(actIds, userId, callback){
     var query = Activity
@@ -478,13 +421,18 @@ function discover(location, user, callbackDone){
 function convertTags(activities){
     var res = [];
     for(var i = 0; i < activities.length; i++){
-        var actObj = common.deepObjClone(activities[i]);
-        delete actObj['tagsByLanguage'];
-        actObj.tags = activities[i]['tagsByLanguage'];
-        res.push(actObj);
+        res.push(convertTag(activities[i]));
     }
-
     return res;
+};
+
+function convertTag(activity){
+    var actObj = {};
+    common.deepObjClone(activity);
+    delete actObj['tagsByLanguage'];
+    actObj.tags = activity['tagsByLanguage'];
+
+    return actObj;
 };
 
 function prepareActivities(activities){
@@ -565,10 +513,7 @@ function createActivity(activity, isFb, callbackDone){
             }
         ],
         function(err, createdActivity, user){
-            if(err){
-                log.error(err);
-                callbackDone(err);
-            }
+            if(err){ callbackDone(err); }
             else{
                 var activityCopy = common.deepObjClone(createdActivity);
                 var creator = {
@@ -671,12 +616,6 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
             messageForOthers = [{ param: creatorSurname } , { commandId: MULTI_PARAMS_MSG_OTHERS }],
             messageForPush = null
             ;
-        //notification = null,
-        //ntfAddressee = getAddressee(activity);
-        ;
-
-        console.log('IN CHANGE FIELDS:', changedFields[0]);
-
         switch(changedFields[0]){
             case 'timeStart':case 'timeFinish': {
             var iterator = function(user, callbackI){
@@ -690,7 +629,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                 else{ callbackI(null); }
             };
             common.deleteReminder(activity._id, function(err){
-                if(err){log.error(err);}
+                if(err){ console.error(err); }
                 else{
                     async.waterfall([
                             function(callback){
@@ -707,8 +646,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                             }
                         ],
                         function(err){
-                            if(err){log.error(err); }
-                            else{ log.info('ACTIVITY OPERATIONS ACTIVITY REMINDERS UPDATED'); }
+                            if(err){console.error(err); }
                         })
                 }
             });
@@ -732,7 +670,6 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                     var maxMembers = activity.maxMembers < 21? activity.maxMembers: 'unlimited';
                     message =  [{ commandId: YOU} , { commandId: CHANGED_MAX_MEMBERS} , { param: maxMembers }];
                     messageForOthers = [{ param: creatorSurname }, { commandId: CHANGED_MAX_MEMBERS }, { param: maxMembers }];
-                    //console.log('CHANGE MAXMEMBERS UPDATE', messageForOthers);
                 }
 
             };break;
@@ -749,7 +686,6 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                 shouldSend = false;
             };break;
             case 'isPrivate':{
-                //console.log('IN PRIVATE CASE: ', activity);
                 if(changedFields.length == 1) {
                     if(activity.isPrivate){
                         message = [{ commandId: YOU }, { commandId: CHANGED_PRIVATE_YES }];
@@ -785,30 +721,20 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
             default: shouldSend = false; break;
 
         }
-        //console.log('IN CHANGE FIELDS SHOULD SEND', shouldSend);
-        //TODO 1 make processing to client side should send message with all languages and choose language to show message in app see todo 2 at the end of the file
-        /*server should do:
-         if(shouldSend){
-         if(forEveryBody){
-         Socket.sendToOthers(messageForOthers, activity._id, activity.creator);
-         }
-         Socket.sendToCreator(activity.creator, NOSOLO_ID, NOSOLO_NAME, activity._id, message);
-         }
-         *
-         * */
         if(shouldSend){
             if(forEveryBody){
                 var users = User.find({ '_id': { $in: usersIds } },
                     function(err, resUsers){
-                        if(err){log.error(err); }
+                        if(err){console.error(err); }
                         else{
+                            //TODO this solution is not scalable. Create function that sends message code and params to all users at once
+                            //TODO and in app function that can receive it and show according to user language
                             resUsers.forEach(function(user){
                                 if(user._id != activity.creator._id){
                                     var resultMessage = createMessage(user.systemLanguage, messageForOthers);
                                     var pushMsg = null;
                                     if(messageForPush){
                                         pushMsg = createMessage(user.systemLanguage, messageForPush );
-                                        console.log('Push message', pushMsg);
                                     }
                                     Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
                                 }
@@ -817,7 +743,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                     });
             }
             user = User.findById(activity.creator._id, function(err, resUser){
-                if(err){ log.error(err); }
+                if(err){ console.error(err); }
                 else{
                     var resultMessage = createMessage(resUser.systemLanguage, message);
                     Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
@@ -829,7 +755,6 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
 };
 
 function getTimeComponents(time){
-    //console.log('timeParams init', time);
     var timeParams = null;
     var day = null;
     var date = null;
@@ -858,7 +783,6 @@ function getTimeComponents(time){
         timeParams = [{ commandId: ON }, { param: date }, { commandId: AT },
             { param: hours }, { param: ':' }, { param: minutes }];
     }
-    //console.log('timeParams result', timeParams);
     return timeParams;
 };
 
@@ -882,20 +806,14 @@ function createInviteMessage(userId, activityId, isParticipant, callbackDone){
             },
             //create message
             function(userLang, resActivity, callback){
-                //console.log('create message to invite', isParticipant);
                 var commandId = isParticipant? GOING: INTERESTING_IN;
                 var messageComponents = [
                     {commandId: commandId},
                     {param: resActivity.title}
                 ];
                 var time = null;
-                /*if(resActivity.localTimeStart){
-                 time = resActivity.localTimeStart;
-                 }*/
-                //else{
                 var date = new Date(resActivity.timeStart);
                 time = date;
-                //}
                 var timeComponents = getTimeComponents(time);
                 var resMessageParams = messageComponents.concat(timeComponents);
                 resMessageParams.push({ param: WHITESPACE });
