@@ -421,18 +421,12 @@ function discover(location, user, callbackDone){
 function convertTags(activities){
     var res = [];
     for(var i = 0; i < activities.length; i++){
-        res.push(convertTag(activities[i]));
+        var actObj = common.deepObjClone(activities[i]);
+        delete actObj['tagsByLanguage'];
+        actObj.tags = activities[i]['tagsByLanguage'];
+        res.push(actObj);
     }
     return res;
-};
-
-function convertTag(activity){
-    var actObj = {};
-    common.deepObjClone(activity);
-    delete actObj['tagsByLanguage'];
-    actObj.tags = activity['tagsByLanguage'];
-
-    return actObj;
 };
 
 function prepareActivities(activities){
