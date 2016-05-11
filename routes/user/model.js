@@ -49,7 +49,7 @@ function leave(request, response){
 };
 
 function removeUser(request, response){
-    Activity.removeUserFromActivity(request.body.activityId, request.body.userId, true, function(err, resultActivity){
+    ActivityModel.removeUserFromActivity(request.body.activityId, request.body.userId, true, function(err, resultActivity){
         var resJson = {};
         if(err){
             console.error(err);
