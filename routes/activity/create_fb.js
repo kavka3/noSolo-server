@@ -10,11 +10,7 @@ var activityModel = require('../../models/activitiesOperations.js'),
     NotificationOperations = require('../../models/notificActions.js')
 ;
 
-module.exports = {
-    createFbActivities: createFbActivities
-};
-
-function createFbActivities(req, res){
+module.exports = function createFbActivities(req, res){
     async.waterfall([
         //get activities to create and to update
         function(callback){
@@ -92,16 +88,14 @@ function createFbActivities(req, res){
 };
 
 function updateIterator(userId, resActs, activityId, callbackUI){
-    NotificationOperations.joinApprove(null, userId, activityId, null,
-        function(err, activity){
-            if(err){ callbackUI(null); }
-            else{
-                resActs.push(activity);
-                callbackUI(null);
-            }
+    activityModel.userIn(userId, activityId, function(err, activity){
+        if(err){ callbackUI(null); }
+        else{
+            resActs.push(activity);
+            callbackUI(null);
+        }
     });
 };
-
 
 function createIterator(userId, resActs, toCreate, callbackCI){
     async.waterfall([
@@ -139,9 +133,10 @@ function createIterator(userId, resActs, toCreate, callbackCI){
                     fbId: toCreate.fbId,
                     description: toCreate.description,
                     maxMembers: toCreate.maxMembers,
-                    formattedAddress: toCreate.formattedAddress
+                    formattedAddress: toCreate.formattedAddress,
+                    isPrivate: toCreate.isPrivate
                 };
-                activityModel.createActivity(newActivity, false, true, function(err, createdAct){
+                activityModel.createActivity(newActivity, true, function(err, createdAct){
                     if(err){ callback(err); }
                     else{ callback(null, createdAct) }
                 })

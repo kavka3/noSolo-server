@@ -1,10 +1,8 @@
 var log = require('../lib/log.js')(module),
-    crypt = require('bcrypt-nodejs'),
     async = require('async'),
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
-    Notification = require('./../data/notificationSchema.js'),
-    User = connection.model('NoSoloUser'),//User = require('./../data/userSchema.js'),
+    User = connection.model('NoSoloUser'),
     UserLocation = require('./../data/userLocationSchema.js'),
     FB = require('fb'),
     YEARMILLS = 31557600000,//24 * 3600 * 365.25 * 1000,
@@ -15,12 +13,6 @@ var log = require('../lib/log.js')(module),
     ;
 
 module.exports = {
-    getAllUsers: function(callback){
-       User.find({}, /*'_id surname familyName created',*/ function(err,users){
-           if(err){ log.error(err), callback(err) }
-           else{ callback(null, users) }
-       })
-    },
 
     signIn: signIn,
 
@@ -63,16 +55,8 @@ module.exports = {
     },
 
     universalUserUpdate: function(userObj, callback){
-        var changes = common.deepObjClone(userObj);
-        delete changes._id;
-        delete changes.__v;
-        delete  changes.activitiesJoined;
-        delete  changes.activitiesCreated;
-        delete changes.activityCreatedNumber;
-        delete changes.activitiesLiked;
-        delete  changes.activitiesDisliked;
-        delete changes.notifications;
-        User.findByIdAndUpdate(userObj._id, changes,{upsert: true, new: true}, function(err, changed){
+        var changes = cutFields(userObj);
+        User.findByIdAndUpdate(userObj._id, changes,{new: true}, function(err, changed){
             if(err){ callback(err); }
             else if(common.isEmpty(changed)){ callback(new Error('User not found')) }
             else{ callback(null, changed); }
@@ -113,33 +97,18 @@ module.exports = {
     universalUserSearch: function(criteria, value, callback){
         var searchObj = {};
         searchObj[criteria] = value;
-        User.find(searchObj,function(err, res, affected){
-            if (err) {
+        User.find(searchObj, function(err, res){
+            if (err){
                 log.error(err);
                 callback(err);
             }
             else if(res == null || res.length == 0){
-                log.info('user is not found');
-                callback(null, 'user is not found');
+                callback(new Error('user is not found'));
             }
             else{
                 callback(null, res);
             }
         });
-    },
-
-    getUsersByList: function(userList, callback){
-        User.find({ '_id': {$in: userList } }
-            , function (err, resUsers){
-                if(err){
-                    log.info(err.message);
-                    callback(err);
-                }
-                else{
-                    callback(null, resUsers);
-                }
-            }
-        );
     },
 
     saveDeviceId: function(userId, deviceType, deviceId, callback){
@@ -156,13 +125,6 @@ module.exports = {
                 if(err){ callback(err); }
                 else{ console.log('DEVICEID SAVED'); callback(null); }
             });
-    },
-
-    getByDiscover: function(activityId, callbackDone){
-        User.find({discoveredActivities: activityId}, '_id', function(err, resUsers){
-            if(err){callbackDone(err); }
-            else{ callbackDone(null, resUsers); }
-        })
     },
 
     createFbUser: createFbUser
@@ -235,7 +197,6 @@ function cutFields(userObj){
     for(var i = 0; i < FIELDS_TO_DELETE.length; i++){
         delete copy[FIELDS_TO_DELETE[i]];
     }
-
     return copy;
 };
 

@@ -8,8 +8,7 @@ var log = require('../lib/log.js')(module),
     NotificationBox = require('../lib/redisConnection.js').client,
     LocalStorage = [],
     SocketStorage = [],
-    User = connection.model('NoSoloUser'),
-    Notification = connection.model('NoSoloNotification')
+    User = connection.model('NoSoloUser')
   ;
 
 
@@ -245,41 +244,6 @@ var NotificationManager = {
         })
     },
 
-    getAllNotifications: function(userId, callback){
-        User.findById(userId, function(err, resUser){
-            if(err) {
-                log.error(err.message);
-                callback(err) ;
-            }
-            else if(!resUser || common.isEmpty(resUser)){
-                log.error('user is not found');
-                callback(new Error('user is not found'));
-            }
-            else{
-                var notifications = [];
-                var iterator = function(notificationId, callbackI){
-                    Notification.findById(notificationId, function(err, resNotify, affected){
-                        if(err){ 'IN GET ALL NTFS',callbackI(err); }
-                        else{
-                            notifications.push(resNotify);
-                            callbackI();
-                        }
-                    });
-                };
-                async.eachSeries(resUser.notifications, iterator, function(err){
-                    if(err){
-                        log.error(err);
-                        callback(err);
-                    }
-                    else{
-                        log.info('got notification for user: ' + userId);
-                        callback(null, notifications);
-                    }
-                });
-            }
-        });
-    },
-
     getDeviceIds: function(userIds, callback) {
         if( Object.prototype.toString.call( userIds ) === '[object Array]' ){
             User.find({ '_id': {$in: userIds } }
@@ -314,49 +278,10 @@ var NotificationManager = {
 
     }
 
-    /* cause circle require with socket.js
 
-    saveForGroup: function(addresses, notificationId){
-        for(var i = 0; i < addresses.length; i++){
-            UserOperations.universalUserUpdate(addresses[i], { $push: {notifications: notificationId } }, function(err, result){
-                if(err){ log.error(err.message + ' user: ' + addresses[i] + ' notifyId: ' + notifyId) };
-            })
-        }
-    },
-
-    saveForOne: function(userId, notificationId){
-        User.findByIdAndUpdate(userId, { $push: {notifications: notificationId } },
-            function(err, result){
-                if(err){ log.error(err); }
-            })
-    }*/
 
 };
 
 module.exports = NotificationManager;
 
-/*
-NotificationBox.hkeys('user_socketIds', function(err, boxKeys){
-    if(err){ callback(err); }
-    else{
-        for(var i = 0; i < userIds.length; i++){
-            var index = boxKeys.indexOf(userIds[i]);
-            if(index > (-1)){
-                NotificationBox.hmget('user_socketIds',userIds[i], function(err, socketId){
-                    if(err){ log.error(err); }
-                    else{ log.info('socketId: ' + socketId);groupBox.push(socketId);  }
-                });
-            }
-            else{
-                notInSystem.push(userIds[i]);
-            }
-        }
-        log.info('box created');
-        if(groupBox.length > 0){
-            callback(null, groupBox, notInSystem);
-        }
-        else{
-            callback(null, null, notInSystem);
-        }
-    }
-});*/
+

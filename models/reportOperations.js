@@ -4,7 +4,6 @@
 
 var log = require('../lib/log.js')(module),
     async = require('async'),
-    common = require('../lib/commonFunctions.js'),
     mail = require('../lib/email.js'),
     Report = require('./../data/reportSchema.js'),
     Activity = require('./activitiesOperations')
