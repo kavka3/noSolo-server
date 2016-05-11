@@ -137,7 +137,7 @@ function compareAct(oldAct, newAct){
 function create(request, response){
     var activityObj = checkActivityFields(request.body);
     if(activityObj.result != 'error'){
-        ActivityModel.createActivity(activityObj, false, false, function(err, created){
+        ActivityModel.createActivity(activityObj, false, function(err, created){
             if(err){
                 console.error(err);
                 response.status(500).json({ message: err.message });

@@ -453,6 +453,7 @@ function discover(location, user, callbackDone){
 
             var query = Activity
                 .find({ location : { $nearSphere : location, $maxDistance: searchDistance } })
+                .where('_id').nin(user.activitiesJoined)
                 .where('timeFinish').gt(Date.now())
                 .where('timeStart').lt(startLimit)
                 .where('isPrivate').ne(true)
@@ -529,10 +530,10 @@ function createActivity(activity, isFb, callbackDone){
                         else{ callback(new Error("can't save user changes")); }
                     });
             },
-            function(createdActivity, activityChat, callback){
+            function(createdActivity, activityChat, user, callback){
                 ChatBroker.createChatBox(createdActivity.creator, createdActivity._id, function(err){
                     if(err){callback(err)}
-                    else{ callback(null, createdActivity, activityChat) }
+                    else{ callback(null, createdActivity, activityChat, user) }
                 })
             },
             function(createdActivity, activityChat, user, callback){

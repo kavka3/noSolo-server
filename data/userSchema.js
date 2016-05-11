@@ -21,12 +21,6 @@ var userSchema = new Schema({
         required: true,
         default: 'some token'
     },
-   /* noSoloId: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        unique: true,
-        default: new ObjectId
-    },*/
     surname: {
         type: String,
         required: true
