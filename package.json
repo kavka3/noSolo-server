@@ -40,7 +40,6 @@
     "mongodb-uri": "~0.9.7",
     "mongoose": "~4.1.9",
     "mongoose-autoinc": "~0.0.2",
-    "multer": "~0.1.8",
     "nconf": "~0.7.1",
     "node-base64-image": "^0.1.2",
     "node-gcm": "~0.14.0",

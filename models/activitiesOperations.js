@@ -743,7 +743,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                                     if(messageForPush){
                                         pushMsg = createMessage(user.systemLanguage, messageForPush );
                                     }
-                                    Socket.sendToCreator(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
+                                    Socket.sendToOne(user._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, pushMsg);
                                 }
                             });
                         }
@@ -753,7 +753,7 @@ function sendUpdateNtf(activity, creatorSurname, changedFields, oldActivity){
                 if(err){ console.error(err); }
                 else{
                     var resultMessage = createMessage(resUser.systemLanguage, message);
-                    Socket.sendToCreator(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
+                    Socket.sendToOne(activity.creator._id, NOSOLO_ID, NOSOLO_NAME, activity._id, resultMessage, null, true);
                 }
             })
 
@@ -891,7 +891,7 @@ function createWelcomeActivity(userId, userLang, creatorId, title, description, 
                     Socket.addToChat(userId, resAct._id);
                     setTimeout(function(){
                         var finalMessage = commandDictionary[checkedLang][WELCOME_ACTIVITY_MESSAGE];
-                        Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, finalMessage);
+                        Socket.sendToOne(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, finalMessage);
                     }, 2000);
                 }
                 else{

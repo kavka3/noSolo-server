@@ -60,7 +60,7 @@ function acceptInvite(request, response){
             if(err){ response.json({ result: 'error', data: err.message}); }
             else{ response.json({ result: 'success', data: null }) }
         })
-}
+};
 
 function invite(request, response){
     var isSingle = 1;

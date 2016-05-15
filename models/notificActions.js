@@ -28,21 +28,6 @@ function getAllUsers(callback){
 }
 
 module.exports =  NotificationOperations = {
-    sendSystemMessage: function(message, title, callback){
-        var notification = Notification({ creator: 'NoSolo', notificationType: MESSAGE_FROM_SYSTEM
-            , specialData: {message: message, title: title} });
-
-        notification.save(function(err){
-            if(err){ callback(err) }
-        });
-        getAllUsers(function(err, users){
-            if(err){ callback(err); }
-            else{
-                Socket.notifyToAll(users, notification);
-                callback(null);
-            }
-        })
-    },
     sendUpdateMessage: function(canContinue, message, iosLink, androidLink){
         async.waterfall([
                 function(callback){
