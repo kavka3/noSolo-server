@@ -6,8 +6,7 @@ var activityModel = require('../../models/activitiesOperations.js'),
     userModel = require('../../models/userOperations.js'),
     async = require('async'),
     upload = require('../../lib/uploadImages.js'),
-    common = require('../../lib/commonFunctions.js'),
-    NotificationOperations = require('../../models/notificActions.js')
+    common = require('../../lib/commonFunctions.js')
 ;
 
 module.exports = function createFbActivities(req, res){
@@ -144,7 +143,7 @@ function createIterator(userId, resActs, toCreate, callbackCI){
             //add user in if necessary
             function(activity, callback){
                 if(toCreate.isGoing && userId != toCreate.creator._id){
-                    NotificationOperations.joinApprove(null, userId, activity._id, null,
+                    activityModel.userIn(userId, activity._id,
                         function(err, changed){
                             if(err){ callback(err); }
                             else{ callback(null, changed); }
