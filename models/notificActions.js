@@ -2,8 +2,7 @@
  * Created by comp on 3/21/2015.
  */
 
-var log = require('../lib/log.js')(module),
-    connection = require('../lib/db.js').connection,
+var connection = require('../lib/db.js').connection,
     async = require('async'),
     User = connection.model('NoSoloUser'),
     Notification = require('./../data/notificationSchema.js'),
@@ -29,35 +28,21 @@ function getAllUsers(callback){
 }
 
 module.exports =  NotificationOperations = {
-
     sendSystemMessage: function(message, title, callback){
         var notification = Notification({ creator: 'NoSolo', notificationType: MESSAGE_FROM_SYSTEM
             , specialData: {message: message, title: title} });
-        log.info('New system message: ');
-        console.log(notification);
+
         notification.save(function(err){
-            if(err){
-                log.error(err.message), callback(err)
-            }
+            if(err){ callback(err) }
         });
         getAllUsers(function(err, users){
-            if(err){
-                log.error(err.message);
-                callback(err);
-            }
+            if(err){ callback(err); }
             else{
                 Socket.notifyToAll(users, notification);
                 callback(null);
             }
         })
     },
-
-    leaveActivity: function(activity, user){
-        var message = user.surname + ' left';
-        var pushMessage = user.surname + ' left ' + activity.title;
-        Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, false, pushMessage);
-    },
-
     sendUpdateMessage: function(canContinue, message, iosLink, androidLink){
         async.waterfall([
                 function(callback){
@@ -78,38 +63,24 @@ module.exports =  NotificationOperations = {
                 },
                 function(ntf, users, callback){
                     var iterator = function(user, callbackI){
-                        console.log('SAVING: ', ntf._id);
                         User.update({_id: user._id}, { $set: { 'notifications': ntf._id } }, { upsert: true },
                             function(err, res){
                                 if(err){ callbackI(err); }
-                                else{ console.log(res);callbackI(null) }
+                                else{ callbackI(null) }
 
                             });
-                        /*user.notifications.push(ntf._id);
-                         console.log('USER: ', user);
-                         user.save(function(err,rersult){
-                         if(err){callbackI(err); }
-                         else{callbackI(null); }
-                         })*/
                     };
                     async.eachSeries(users, iterator, function(err, result){
                         if(err){ callback(err); }
-                        else{ console.log('USERS UPDATED: ', result); callback(null); }
-                    })
-                    /*User.update({}, { $set: { 'notifications': ntf._id } }, { upsert: true },
-                     function(err, res){
-                     if(err){ callback(err); }
-                     else{ console.log(res);callback(null) }
-
-                     })*/
+                        else{ callback(null); }
+                    });
                 }
             ],
             function(err){
-                if(err){log.error(err); }
-                else{ log.info('Notification saved'); }
+                if(err){console.error(err); }
+                else{ console.info('Notification saved'); }
             })
     }
-
 };
 
 

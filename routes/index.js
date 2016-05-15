@@ -1,30 +1,3 @@
-var log = require('../lib/log.js')(module),
-    Activity = require('../models/activitiesOperations.js'),
-    NotificationOperations = require('../models/notificActions.js'),
-    NotyMan = require('../models/notificationManager.js'),
-    Socket = require('../lib/socket.js'),
-    async = require('async'),
-    s3signing = require('../lib/s3upload.js'),
-    common = require('../lib/commonFunctions.js'),
-    report = require('../models/reportOperations.js'),
-    AppCommands = require('../models/appDictionaryOperations.js'),
-    ChatBroker = require('../models/chatBroker.js'),
-    User = require('../models/userOperations.js')
-
-;
-
-function checkReportFields(obj){
-    //log.info('IN CHECK REPORT: ', obj.userId, ' ', obj.activityId, ' ', obj.type, ' ', obj.message);
-    if(common.isEmpty(obj.userId) || common.isEmpty(obj.activityId) || common.isEmpty(obj.type)
-        || common.isEmpty(obj.message)){ return false; }
-    else{ return true; }
-};
-
-function checkDeviceIdFields(deviceIdObj){
-   if(!common.isEmpty(deviceIdObj.userId) && !common.isEmpty(deviceIdObj.platform)
-       && !common.isEmpty(deviceIdObj.deviceId)){ return true; }
-    else{ return false; }
-};
 
 module.exports = function(app){
     //returns to app link to server and redirect server depends on app version
@@ -45,6 +18,10 @@ module.exports = function(app){
     //creator removes user from activity
     app.post('/delete_member_from_activity', require('./user/model.js').removeUser);
 
+    app.post('/device_register', require('./user/model.js').deviceRegister);
+
+    app.post('/device_unregister', require('./user/model.js').deviceUnregister);
+
     app.post('/create_tag', require('./tag/crud.js').create);
     //returns all tags sorted by language
     app.post('/tag_dictionary', require('./tag/crud.js').dictionary);
@@ -61,256 +38,31 @@ module.exports = function(app){
 
     app.post('/fb_activities', require('./activity/create_fb'));
 
-    app.post('/system_message', function(request, response){
-        NotificationOperations.sendSystemMessage(request.body.message, request.body.title, function(err){
-            if(err){ response.send(err) }
-            else{ response.send('message sent') }
-        });
-    });
+    app.post('/update_image', require('./activity/crud.js').updateImage);
 
-    app.get('/loaderio-a327d6c55c412e4ff973d1d816ddb861.html', function(req, res){
+    app.post('/invite', require('./activity/model.js').invite);
 
-        res.send('loaderio-a327d6c55c412e4ff973d1d816ddb861');///
-    });
+    app.post('/accept_invite', require('./activity/model.js').acceptInvite);
 
-    app.post('/update_image', function(request, response){
-        Activity.updateImage(request.body, function(err, result){
-            if(err){response.json({ result: 'error', data: error.message }); }
-            else{
-                var resJson = { result: 'success', data: result };
-                resJson.notForCreator = true;
-                Socket.sendMyActivityUpdate(result._id, resJson/*, resUsers*/);
-                response.json(resJson);
-            }
-        })
-    });
+    app.post('/report_activity', require('./activity/model.js').report);
 
-    app.post('/invite', function(request, response){
-        var isSingle = 1;
-        var inviteType = request.body.socialType? request.body.socialType: null;
-        if(request.body.isSingle){
-            //console.log('invite: ', request.body, request.body.isParticipant);
-            isSingle = request.body.isSingle;
-        }
-        //var stab = 'here will be a pretty smart new message to invite your friends in the activity ';
-        Activity.inviteToActivity(request.body.link, request.body.creator, request.body.activityId,
-            isSingle, inviteType, request.body.isParticipant, function(err, resLink, resMessage){
-                if(err){ log.error(err); response.json({result: 'error', data: err.message }); }
-                else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }
-            });
-    });
+    app.post('/get_subscribe', require('./activity/model.js').subscribe);
 
-    app.post('/accept_invite', function(request, response){
-        Activity.acceptInvite(request.body.inviteId, /*request.body.userId,*/
-            function(err){
-                if(err){ response.json({ result: 'error', data: err.message}); }
-                else{ response.json({ result: 'success', data: null }) }
-            })
-    });
-
-    app.post('/report_activity', function(request, response){
-        //log.info('IN REPORT ACTIVITY INDEX: ', request.body);
-        if(!checkReportFields(request.body)){
-            report.receiveReport(request.body.userId, request.body.activityId,
-                request.body.type, request.body.message, function(err){
-                    if(err){ response.send({result: 'error', data: err }); }
-                    else{ response.send({result: 'success', data: null });}
-                } );
-        }
-        else{ response.send({result: 'error', data: 'Not enough fields for report' }); }
-    });
-
-    app.post('/get_subscribe', function(request, response){
-            report.receiveReport(request.body.userId, request.body.activityId, 6, 'empty', function(err){
-                    if(err){ response.send({result: 'error', data: err }); }
-                    else{ response.send({result: 'success', data: null });}
-                } );
-    });
-
-    app.post('/minifyLink', function(request, response){
-        var shortener = require('../lib/urlShorter.js');
-        if(request.body.link != null){
-            shortener.minimizeUrl(request.body.link, function(err, resLink){
-                if(err){ response.json({ result: "error", data: err }) }
-                else{ response.json({ result: "success", data: resLink }) }
-            })
-        }
-        else{ response.json({ result: "error", data: "no link in request" }) }
-
-    });
-
-    app.post('/device_register', function(request, response){
-        console.log('DEVICE REGISTER REQUEST: ', request.body);
-        if(checkDeviceIdFields(request.body)){
-            User.saveDeviceId(request.body.userId, request.body.platform, request.body.deviceId
-                , function(err){
-                    if(err){
-                        log.error(err);
-                        response.json({ result: 'error', data: err });
-                    }
-                    else{
-                        response.json({ result: 'success', data: null });
-                    }
-                })
-        }
-        else{ response.json({ result: 'error', data: 'not enough fileds' }); }
-    });
-
-    app.post('/device_unregister', function(request, response){
-        console.log('DEVICE UNREGISTER REQUEST: ', request.body);
-        if(request.body.userId){
-            User.clearDeviceId(request.body.userId, function(err){
-                if(err){ response.json({ result: 'error', data: err }); }
-                else{ response.json({ result: 'success', data: null }); }
-            })
-        }
-        else{ response.json({ result: 'error', data: 'not enough fileds' }); }
-    });
-
+    app.post('/minifyLink', require('./activity/model.js').minifyLink);
    //returns reported activities
-    app.get('/get_reports', function(request, response){
-       report.getReports(function(err, resReports){
-           if(err){
-               log.error(err);
-               response.json({result: 'error', data: err.message });
-           }
-           else{
-               console.log('Got all reports:', resReports);
-               response.json({result: 'success', data: resReports });
-           }
-       })
-    });
+    app.get('/get_reports', require('./services/services.js').getReports);
 
-    app.post('/proceed_report', function(request, response){
-        report.proceedReport(request.body.activityId, function(err){
-            if(err){ response.json({result: 'error', data: err.message }); }
-            else{ response.json({result: 'success', data: null });
-            }
-        })
-    });
+    app.post('/proceed_report', require('./services/services.js').proceed);
 
-    app.post('/reject_report', function(request, response){
-        report.rejectReport(request.body.activityId, function(err){
-            if(err){
-                log.error(err);
-                response.json({result: 'error', data: err.message });
-            }
-            else{ response.json({result: 'success', data: null }); }
-        })
-    });
+    app.post('/reject_report', require('./services/services.js').reject);
 
-    app.get('/command_dictionary', function(request, response){
-        AppCommands.getCmdDictionary(function(err, resDict){
-            if(err){
-                log.error(err);
-                response.json({
-                    result: 'error',
-                    data: 'err.message'
-            });
-            }
-            else{
-                response.json({
-                    result: 'success',
-                    data: resDict
-                });
-            }
-        });
-    });
+    app.get('/command_dictionary', require('./services/services.js').commandDictionaryGet);
 
-    app.post('/commandDictionary', function(request, response){
-        AppCommands.createCommand(null, request.body.control, request.body.command, request.body.cmdDictionary,
-            function(err, resCmd){
-                if(err){
-                    log.error(err);
-                    response.json({
-                        result: 'error',
-                        data: err.message
-                    });
-                }
-                else{
-                    response.json({
-                        result: 'success',
-                        data: resCmd
-                    });
-                }
-            })
-    }),
+    app.post('/commandDictionary', require('./services/services.js').commandDictionaryPost);
 
-    app.get('/command_base', function(request, response){
-            AppCommands.getCommandBase(function(err, resDict){
-                if(err){
-                    log.error(err);
-                    response.json({
-                        result: 'error',
-                        data: 'err.message'
-                    });
-                }
-                else{
-                    console.log('COMMAND BASE LENGTH', resDict.length);
-                    response.json({
-                        result: 'success',
-                        data: resDict
-                    });
-                }
-            });
-        });
+    app.get('/command_base', require('./services/services.js').appCommandBase);
 
-    app.post('/support_chat', function(request, response){
-        ChatBroker.updateSupportChat(request.body.chatId);
-        response.json({result: 'success'});
-    });
+    app.post('/support_chat', require('./services/services.js').updateSupportChat);
 
-    app.post('/admin_chat', function(request, response){
-        async.waterfall([
-                function(callback){
-                    Activity.createWelcomeActivity(request.body.userId, request.body.userLang, request.body.adminId, request.body.title, request.body.description
-                        , request.body.imageUrl, request.body.location, true, function(err, resActivity){
-                            if(err){ callback(err); }
-                            else{ callback(null, resActivity); }
-                        })
-                },
-                function(activity, callback){
-                    ChatBroker.getChat(activity._id, function(err, resChat){
-                        if(err){ callback(err); }
-                        else{ callback(null, activity, resChat) }
-                    })
-                }
-            ],
-            function(err, activity, chat){
-                if(err){
-                    log.error(err);
-                    response.json({
-                        result: 'error',
-                        data: err
-                    })
-                }
-                else{
-                    log.info('Admin chat created:', chat._id);
-                    response.json({
-                        result: 'success',
-                        data: {
-                            activity: activity,
-                            chat: chat
-                        }
-                    })
-                }
-            });
-
-    });
-
-    app.post('/message_viewed', function(request, response){
-        ChatBroker.messageViewed(request.body.userId, request.body.messageIds, function(err, res){
-            if(err){
-                log.error(err);
-            }
-            else{
-                //
-            }
-            response.send();
-        })
-    });
-
+    app.post('/admin_chat', require('./services/services.js').createSupportChat);
 };
-
-
-

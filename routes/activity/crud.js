@@ -12,7 +12,20 @@ module.exports = {
     create: create,
     update: update,
     search: search,
-    remove: remove
+    remove: remove,
+    updateImage: updateImage
+};
+
+function updateImage(request, response){
+    ActivityModel.updateImage(request.body, function(err, result){
+        if(err){response.json({ result: 'error', data: error.message }); }
+        else{
+            var resJson = { result: 'success', data: result };
+            resJson.notForCreator = true;
+            Socket.sendMyActivityUpdate(result._id, resJson);
+            response.json(resJson);
+        }
+    })
 };
 
 function remove(request, response){
@@ -137,7 +150,7 @@ function compareAct(oldAct, newAct){
 function create(request, response){
     var activityObj = checkActivityFields(request.body);
     if(activityObj.result != 'error'){
-        ActivityModel.createActivity(activityObj, false, function(err, created){
+        ActivityModel.createActivity(activityObj, function(err, created){
             if(err){
                 console.error(err);
                 response.status(500).json({ message: err.message });

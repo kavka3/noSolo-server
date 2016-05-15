@@ -9,13 +9,12 @@
         User = require('../data/userSchema.js'),
         Tag = require('./tagsOperations.js'),
         Socket = require('../lib/socket.js'),
-        Notify = require('./notificActions.js'),
+        checkLanguage = require('./serverDictionaryOperations.js').checkLanguage,
         Invite = require('../data/inviteSchema.js'),
         mongoose = require('mongoose'),
         commandDictionary = require('./serverDictionaryOperations.js').dictionary,
         createMessage = require('./serverDictionaryOperations.js').createMessage,
         urlShorter = require('../lib/urlShorter.js'),
-        ActivityOperations = null,
 
         RADIUS = 6371,//earth radius in km
         DELAY = 2000,
@@ -67,7 +66,14 @@
 
         JOINED = ' joined ',
         NOSOLO_ID = '100009647204771',
-        NOSOLO_NAME = 'noSolo'
+        NOSOLO_NAME = 'noSolo',
+        NOSOLO_CHAT = '198803877117851',
+        WELCOME_URL = 'https://s3.amazonaws.com/nosoloimages/Smile.jpg',
+        WELCOME_LOCATION = [34.85992, 32.33292],
+        WELCOME_MESSAGE = 30,
+        WELCOME_ACTIVITY_MESSAGE = 31,
+        WELCOME_TITLE = 32,
+        WELCOME_DESCRIPTION = 33
         ;
 }
 
@@ -85,7 +91,8 @@ module.exports = {
     findActivity: findActivity,
     createActivity: createActivity,
     inviteToActivity: inviteToActivity,
-    acceptInvite: acceptInvite
+    acceptInvite: acceptInvite,
+    createWelcomeActivity: createWelcomeActivity
 };
 
 (function checkDictionary(){
@@ -189,7 +196,7 @@ function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
                         }
                         else {
                             Socket.removeFromChat(userId, activityId);
-                            Notify.leaveActivity(activity, changedUser);
+                            leaveActivity(activity, changedUser);
                             callback(null, activity, changedUser);
                         }
                     });
@@ -212,6 +219,12 @@ function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
             if (err) { callbackDone(err); }
             else { callbackDone(null, activity); }
         })
+};
+
+function leaveActivity(activity, user){
+    var message = user.surname + ' left';
+    var pushMessage = user.surname + ' left ' + activity.title;
+    Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, false, pushMessage);
 };
 
 function acceptInvite(inviteId, callbackDone){
@@ -442,7 +455,7 @@ function prepareActivities(activities){
     return res;
 };
 
-function createActivity(activity, isFb, callbackDone){
+function createActivity(activity, callbackDone){
     async.waterfall([
             function(callback){
                 var createdActivity = new Activity(activity);
@@ -819,5 +832,81 @@ function createInviteMessage(userId, activityId, isParticipant, callbackDone){
             if(err){ callbackDone(err); }
             else{ callbackDone(null, resMessage); }
         })
+
+};
+
+function createWelcomeActivity(userId, userLang, creatorId, title, description, imageUrl, location, isAdmin, callbackDone){
+    var checkedLang = checkLanguage(userLang);
+    var aTitle = title? title: commandDictionary[checkedLang][WELCOME_TITLE],
+        aDesc = description? description : commandDictionary[checkedLang][WELCOME_DESCRIPTION],
+        aImage = imageUrl? imageUrl : WELCOME_URL,
+        aLocation = location? location : WELCOME_LOCATION,
+        aCreator = creatorId? creatorId : NOSOLO_CHAT
+        ;
+    async.waterfall([
+            function(callback){
+                var startTime = new Date();
+                var finishTime = new Date();
+                finishTime.setHours(24);
+                var welcomeActivity = {
+                    title: aTitle,
+                    description: aDesc,
+                    imageUrl: aImage,
+                    location: aLocation,
+                    creator: aCreator,
+                    timeStart: startTime,
+                    timeFinish: finishTime,
+                    maxMembers: 2,
+                    isPrivate: true
+                };
+                createActivity(welcomeActivity, function(err, resAct){
+                    if(err){ callback(err); }
+                    else{callback(null, resAct);}
+                });
+            },
+            function(resAct, callback){
+                Chat.findByIdAndUpdate(resAct._id, { $push: { usersInChat: userId }, $set: { crm: { isSupport: true } } },
+                    { new: true },
+                    function(err, resChat){
+                        if(err){ callback(err); }
+                        else{ callback(null, resAct); }
+                    })
+            },
+            function(resAct, callback){
+                User.findByIdAndUpdate(userId,{ $push: { activitiesJoined: resAct._id } }, {new: true},
+                    function(err, resUser){
+                        if(err){ callback(err); }
+                        else{ callback(null, resAct, resUser); }
+                    })
+            },
+            function(resAct, resUser, callback){
+                Activity.findByIdAndUpdate(resAct._id, {$push: { joinedUsers: userId } }, { new: true },
+                    function(err, changedAct){
+                        if(err){ callback(err); }
+                        else{ callback(null, resUser, changedAct); }
+                    })
+            },
+            function( resUser, resAct, callback){
+                if(!isAdmin){
+                    Socket.addToChat(userId, resAct._id);
+                    setTimeout(function(){
+                        var finalMessage = commandDictionary[checkedLang][WELCOME_ACTIVITY_MESSAGE];
+                        Socket.sendToCreator(userId, NOSOLO_ID, NOSOLO_NAME, resAct._id, finalMessage);
+                    }, 2000);
+                }
+                else{
+                    Socket.addToChat(creatorId, resAct._id);
+                }
+                callback(null, resAct, resUser);
+            }
+
+        ],
+        function(err, resAct){
+            if(err){
+                console.error('WELCOME ACTIVITY ERROR: ', err);
+                if(callbackDone){ callbackDone(err); }
+            }
+            else{ if(callbackDone){ callbackDone(null, resAct); } }
+        });
 
 };

@@ -1,5 +1,4 @@
-var log = require('../lib/log.js')(module),
-    common = require('../lib/commonFunctions.js'),
+var common = require('../lib/commonFunctions.js'),
     Tag = require('../data/tagSchema.js');
 
 module.exports = {
@@ -13,10 +12,7 @@ module.exports = {
 function createNewTag(tag, callback){
     var savingTag = new Tag(tag);
     savingTag.save(function(err, savingTag){
-        if(err){
-            log.error(err);
-            callback(err);
-        }
+        if(err){ callback(err); }
         else{
             callback(null, savingTag);
         }
@@ -26,26 +22,14 @@ function createNewTag(tag, callback){
 function addActivities(activityObj, callback){
     for(var i = 0; i < activityObj.tags.length; i++ ){
         Tag.findOne({_title: activityObj.tags[i]}, function(err, result){
-            if(err){
-                log.error(err);
-                callback(err);
-            }
+            if(err){ callback(err); }
             else if(result == null || result.length == 0){
-                log.error('tag is not found: ' + activityObj.tags[i]);
-                //callback(new Error('tag is not found'));
-                //callback(null);
+                console.error('tag is not found: ' + activityObj.tags[i]);
             }
             else{
-                log.info('tag found: ' + result._title);
                 result.activities.push(activityObj.activityId);
-                result.save(function(err, result, affected){
-                    if(err){
-                        log.error(err);
-                        callback(err);
-                    }
-                    else{
-                        log.info('tag updated: ' + result._title);
-                    }
+                result.save(function(err){
+                    if(err){ callback(err); }
                 });
             }
         });
@@ -55,10 +39,7 @@ function addActivities(activityObj, callback){
 
 function getTagsDictionary(languages, callback){
     Tag.find({},'_title tagDictionary tagCategory imageUrl', function(err, allTags){
-        if(err){
-            log.error(err.message);
-            callback(err);
-        }
+        if(err){ callback(err); }
         else{
             var resTags = {};
             if(common.isEmpty(languages)){
@@ -80,14 +61,9 @@ function getTagsDictionary(languages, callback){
 
 function imageUrlUpdate(tagId, url, callback){
     Tag.findByIdAndUpdate(tagId,{imageUrl: url}, function(err, resTag){
-        if(err){
-            log.error(err);
-            callback(err);
-        }
-        else{
-            callback(null, resTag);
-        }
-    } )
+        if(err){ callback(err); }
+        else{ callback(null, resTag); }
+    })
 };
 
 function getAllTags(callback){

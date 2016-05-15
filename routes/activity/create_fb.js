@@ -136,7 +136,7 @@ function createIterator(userId, resActs, toCreate, callbackCI){
                     formattedAddress: toCreate.formattedAddress,
                     isPrivate: toCreate.isPrivate
                 };
-                activityModel.createActivity(newActivity, true, function(err, createdAct){
+                activityModel.createActivity(newActivity, function(err, createdAct){
                     if(err){ callback(err); }
                     else{ callback(null, createdAct) }
                 })

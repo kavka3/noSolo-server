@@ -3,15 +3,49 @@
  */
 var ActivityModel = require('../../models/activitiesOperations.js'),
     common = require('../../lib/commonFunctions.js'),
-    Socket = require('../../lib/socket.js')
+    Socket = require('../../lib/socket.js'),
+    UserModel = require('../../models/userOperations.js')
     ;
 
 module.exports = {
     enter: enter,
     leave: leave,
-    removeUser: removeUser
+    removeUser: removeUser,
+    deviceRegister: deviceRegister,
+    deviceUnregister: deviceUnregister
 };
 
+function deviceUnregister(request, response){
+    if(request.body.userId){
+        UserModel.clearDeviceId(request.body.userId, function(err){
+            if(err){ response.json({ result: 'error', data: err }); }
+            else{ response.json({ result: 'success', data: null }); }
+        })
+    }
+    else{ response.json({ result: 'error', data: 'not enough fields' }); }
+};
+
+function deviceRegister(request, response){
+    if(checkDeviceIdFields(request.body)){
+        UserModel.saveDeviceId(request.body.userId, request.body.platform, request.body.deviceId
+            ,function(err){
+                if(err){
+                    console.error(err);
+                    response.json({ result: 'error', data: err });
+                }
+                else{
+                    response.json({ result: 'success', data: null });
+                }
+            });
+    }
+    else{ response.json({ result: 'error', data: 'not enough fields' }); }
+};
+
+function checkDeviceIdFields(deviceIdObj){
+    if(!common.isEmpty(deviceIdObj.userId) && !common.isEmpty(deviceIdObj.platform)
+        && !common.isEmpty(deviceIdObj.deviceId)){ return true; }
+    else{ return false; }
+};
 
 function enter(request, response){
     ActivityModel.userIn(request.body.userId, request.body.activityId,

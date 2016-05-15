@@ -1,5 +1,4 @@
-var log = require('../lib/log.js')(module),
-    async = require('async'),
+var async = require('async'),
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
     User = connection.model('NoSoloUser'),
@@ -13,120 +12,15 @@ var log = require('../lib/log.js')(module),
     ;
 
 module.exports = {
-
     signIn: signIn,
-
     findUser: findUser,
-
-    deleteUser: function(userId, callback){
-        User.findById(userId, function(err, user) {
-            if (err){
-                log.error(err);
-                callback(err);
-            }
-            else{
-                user.remove(function(err, obj){
-                  if(err) {
-                      log.error(err);
-                      callback(err);
-                  }
-                    else{
-                      log.info('user deleted: ' + userId);
-                      callback(null);
-                  }
-                })
-            }
-
-        });
-    },
-
-    pushNtf: function(userId, ntfId, callback){
-        User.findByIdAndUpdate(userId, { $push: { notifications: ntfId } }, {upsert: true, new: true},
-        function(err, resNtf){
-            if(err){
-                log.error(err);
-                callback(err);
-            }
-            else{
-                //log.info('NTF SAVED: ', resNtf);
-                callback(null, resNtf);
-            }
-        })
-    },
-
-    universalUserUpdate: function(userObj, callback){
-        var changes = cutFields(userObj);
-        User.findByIdAndUpdate(userObj._id, changes,{new: true}, function(err, changed){
-            if(err){ callback(err); }
-            else if(common.isEmpty(changed)){ callback(new Error('User not found')) }
-            else{ callback(null, changed); }
-        })
-    },
-
-    currentLocationUpdate:function(userId, location, callbackDone){
-        async.series([
-            function(callback){
-                User.findByIdAndUpdate(userId, {currentLocation: location},{upsert: true, new: true},
-                    function(err, changed){
-                    if(err){ callback(err); }
-                    else if(common.isEmpty(changed)){ callback(new Error('User not found')) }
-                    else{ callback(null); }
-                })
-            },
-            function(callback){
-                UserLocation.findOneAndUpdate({userId: userId},{$push:{ userLocation: location, locationTime: new Date() }},
-                    {upsert: true, new: true}, function(err, changed){
-                    if(err){ callback(err); }
-                    else if(common.isEmpty(changed)){
-                        callback(new Error('UserLocation not found'));
-                    }
-                    else{ callback(null); }
-                })
-            }
-        ],
-        function(err){
-            if(err){
-                log.error(err);
-                callbackDone(err);
-            }
-            else{ callbackDone(null); }
-        })
-
-    },
-
-    universalUserSearch: function(criteria, value, callback){
-        var searchObj = {};
-        searchObj[criteria] = value;
-        User.find(searchObj, function(err, res){
-            if (err){
-                log.error(err);
-                callback(err);
-            }
-            else if(res == null || res.length == 0){
-                callback(new Error('user is not found'));
-            }
-            else{
-                callback(null, res);
-            }
-        });
-    },
-
-    saveDeviceId: function(userId, deviceType, deviceId, callback){
-        User.findByIdAndUpdate(userId,{ uniqueDeviceId: { type: deviceType, deviceId: deviceId } }
-            ,{upsert: true }, function(err, result){
-                if(err){ callback(err); }
-                else{ console.log('DEVICEID SAVED'); callback(null); }
-            })
-    },
-
-    clearDeviceId: function(userId, callback){
-        User.findByIdAndUpdate(userId, { uniqueDeviceId: [] }
-            ,{upsert: true }, function(err, result){
-                if(err){ callback(err); }
-                else{ console.log('DEVICEID SAVED'); callback(null); }
-            });
-    },
-
+    deleteUser: deleteUser,
+    pushNtf: pushNtf,
+    universalUserUpdate: universalUserUpdate,
+    currentLocationUpdate: currentLocationUpdate,
+    universalUserSearch: universalUserSearch,
+    saveDeviceId: saveDeviceId,
+    clearDeviceId: clearDeviceId,
     createFbUser: createFbUser
 };
 
@@ -163,7 +57,6 @@ function exchangeToken(userId, shortToken, callback){
     var clientId = null,
         clientSecret = null;
     if(!process.env.FB_CLIENT_ID || !process.env.FB_CLIENT_SECRET){
-        console.log('IN SET FB LOCAL');
         var config = require('../config/config');
         clientId = config.fb.clientId;
         clientSecret = config.fb.clientSecret;
@@ -180,13 +73,11 @@ function exchangeToken(userId, shortToken, callback){
     }, function (res) {
         if(!res || res.error) {
             var resErr = !res ? 'FB error occurred' : res.error;
-            log.error(resErr);
             callback(resErr)
         }
         else{
             var accessToken = res.access_token;
             var expires = res.expires ? res.expires : 0;
-            //console.log('FB EXCHANGE SUCCESS', accessToken, expires);
             callback(null, accessToken, expires);
         }
     });
@@ -222,10 +113,7 @@ function createFbUser(user, origin, callback){
 
 function findUser(userId, callback) {
     User.findById(userId, function (err, result) {
-        if (err) {
-            log.error(err);
-            callback(err);
-        }
+        if (err) { callback(err); }
         else{ callback(null, result); }
     });
 };
@@ -319,21 +207,96 @@ function signIn(userArgs, callbackDone){
             }
         ],
         function(err, resUser){
-            if(err){
-                log.error('SIGNIN ERROR: ', err);
-                callbackDone(err);
-            }
-            else{
-                log.info('User logged: ' + resUser._id);
-                callbackDone(null, resUser, isSignUp);
-            }
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null, resUser, isSignUp); }
         });
 
 };
 
+function deleteUser(userId, callback){
+    User.findById(userId, function(err, user) {
+        if (err){ callback(err); }
+        else{ user.remove(function(err, obj){
+                if(err) { callback(err); }
+                else{ callback(null); }
+            }) }
 
+    });
+};
 
+function pushNtf(userId, ntfId, callback){
+    User.findByIdAndUpdate(userId, { $push: { notifications: ntfId } }, {upsert: true, new: true},
+        function(err, resNtf){
+            if(err){ callback(err); }
+            else{ callback(null, resNtf); }
+        })
+};
 
+function universalUserUpdate(userObj, callback){
+    var changes = cutFields(userObj);
+    User.findByIdAndUpdate(userObj._id, changes,{new: true}, function(err, changed){
+        if(err){ callback(err); }
+        else if(common.isEmpty(changed)){ callback(new Error('User not found')) }
+        else{ callback(null, changed); }
+    })
+};
+
+function universalUserSearch(criteria, value, callback){
+    var searchObj = {};
+    searchObj[criteria] = value;
+    User.find(searchObj, function(err, res){
+        if (err){ callback(err); }
+        else if(res == null || res.length == 0){
+            callback(new Error('user is not found'));
+        }
+        else{
+            callback(null, res);
+        }
+    });
+};
+
+function saveDeviceId(userId, deviceType, deviceId, callback){
+    User.findByIdAndUpdate(userId,{ uniqueDeviceId: { type: deviceType, deviceId: deviceId } }
+        ,{upsert: true }, function(err, result){
+            if(err){ callback(err); }
+            else{ callback(null); }
+        })
+};
+
+function currentLocationUpdate(userId, location, callbackDone){
+    async.series([
+            function(callback){
+                User.findByIdAndUpdate(userId, {currentLocation: location},{upsert: true, new: true},
+                    function(err, changed){
+                        if(err){ callback(err); }
+                        else if(common.isEmpty(changed)){ callback(new Error('User not found')) }
+                        else{ callback(null); }
+                    })
+            },
+            function(callback){
+                UserLocation.findOneAndUpdate({userId: userId},{$push:{ userLocation: location, locationTime: new Date() }},
+                    {upsert: true, new: true}, function(err, changed){
+                        if(err){ callback(err); }
+                        else if(common.isEmpty(changed)){
+                            callback(new Error('UserLocation not found'));
+                        }
+                        else{ callback(null); }
+                    })
+            }
+        ],
+        function(err){
+            if(err){ callbackDone(err); }
+            else{ callbackDone(null); }
+        })
+};
+
+function clearDeviceId(userId, callback){
+    User.findByIdAndUpdate(userId, { uniqueDeviceId: [] }
+        ,{upsert: true }, function(err, result){
+            if(err){ callback(err); }
+            else{ callback(null); }
+        });
+};
 
 
 
