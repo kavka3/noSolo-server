@@ -9,8 +9,15 @@ var async = require('async'),
     ;
 
 module.exports = {
-    receiveReport: function(userId, activityId, reportType, reportMessage, callbackDone){
-        async.waterfall([
+    receiveReport: receiveReport,
+    getReports: getReports,
+    proceedReport: proceedReport,
+    rejectReport: rejectReport
+
+};
+
+function receiveReport(userId, activityId, reportType, reportMessage, callbackDone){
+    async.waterfall([
             function(callback){
                 var report = new Report({ userId: userId,  activityId: activityId,
                     reportType: reportType, message: reportMessage });
@@ -50,30 +57,30 @@ module.exports = {
                 callbackDone(null);
             }
         });
-    },
+};
 
-    getReports: function(callbackDone){
-        var query = Report
-            .find({ isFinished: false })
-            .populate('activityId',
-                '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish')
+function getReports(callbackDone){
+    var query = Report
+        .find({ isFinished: false })
+        .populate('activityId',
+            '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish')
         ;
-        query.exec(function(err, resReports){
-            if (err) {
-                callbackDone(err);
-            }
-            else {
-                callbackDone(null, resReports);
-            }
-        })
-        /*Report.find({isFinished: false}, function(err, resReports){
-            if(err){ callbackDone(err); }
-            else{ callbackDone(null, resReports); }
-        })*/
-    },
+    query.exec(function(err, resReports){
+        if (err) {
+            callbackDone(err);
+        }
+        else {
+            callbackDone(null, resReports);
+        }
+    })
+    /*Report.find({isFinished: false}, function(err, resReports){
+     if(err){ callbackDone(err); }
+     else{ callbackDone(null, resReports); }
+     })*/
+};
 
-    proceedReport: function(activityId, callbackDone){
-        async.series([
+function proceedReport(activityId, callbackDone){
+    async.series([
             function(callback){
                 Activity.deleteActivity(activityId, function(err){
                     if(err){ callback(err); }
@@ -87,23 +94,22 @@ module.exports = {
                 })
             }
         ],
-            function (err){
-                if(err){
-                    console.error(err);
-                    callbackDone(err); }
-                else{
-                    callbackDone(null);
-                }
-            })
-
-    },
-    rejectReport: function(activityId, callbackDone){
-        Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
-            if(err){ callbackDone(err); }
+        function (err){
+            if(err){
+                console.error(err);
+                callbackDone(err); }
             else{
-                callbackDone(null, resReports);
+                callbackDone(null);
             }
         })
-    }
 
+};
+
+function rejectReport(activityId, callbackDone){
+    Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
+        if(err){ callbackDone(err); }
+        else{
+            callbackDone(null, resReports);
+        }
+    })
 };
