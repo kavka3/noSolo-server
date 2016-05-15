@@ -2,8 +2,7 @@
  * Created by Ignat on 6/14/2015.
  */
 
-var log = require('../lib/log.js')(module),
-    async = require('async'),
+var async = require('async'),
     mail = require('../lib/email.js'),
     Report = require('./../data/reportSchema.js'),
     Activity = require('./activitiesOperations')
@@ -44,11 +43,10 @@ module.exports = {
         ],
         function(err){
             if(err){
-                log.error(err);
+                console.error(err);
                 callbackDone(err);
             }
             else{
-                log.info('REPORT SAVED');
                 callbackDone(null);
             }
         });
@@ -91,10 +89,9 @@ module.exports = {
         ],
             function (err){
                 if(err){
-                    log.error(err);
+                    console.error(err);
                     callbackDone(err); }
                 else{
-                    log.info('Report finished: success');
                     callbackDone(null);
                 }
             })
@@ -104,7 +101,6 @@ module.exports = {
         Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
             if(err){ callbackDone(err); }
             else{
-                console.log('Report finished:', resReports);
                 callbackDone(null, resReports);
             }
         })

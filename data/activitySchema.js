@@ -1,7 +1,6 @@
 var mongoose = require('../lib/db.js').mongoose,
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
-    log = require('../lib/log.js')(module),
     Chat = require('./chatSchema.js'),
     Tags = require('./tagSchema'),
     Schema = mongoose.Schema,
@@ -11,7 +10,6 @@ var mongoose = require('../lib/db.js').mongoose,
     Avatar = require('./activityArchive.js');
 
 function arrayLimit(val) {
-    console.log('VALIDATE', val);
     return val.length <= 10;
 }
 
@@ -187,8 +185,8 @@ activitiesSchema.pre('remove', function(next){
         },
     ],
     function(err, results){
-        if(err){ log.error(err); next(); }
-        else{ log.info('activity deleted: ' + self._id); next() }
+        if(err){ console.error(err); next(); }
+        else{ next() }
     })
 });
 
@@ -197,12 +195,12 @@ module.exports = ActivityMaster = connection.model('NoSoloActivity', activitiesS
 function saveAvatarChanges(self){
     ActivityMaster.findById(self._id, function(err, resAct, affected){
         if(err){
-            log. error(err);
+            console.error(err);
         }
         else{
             Avatar.findOne({ parentId: self._id }, function(err, oldAvatar, affected){
                 if(err){
-                    log.error(err);
+                    console.error(err);
                 }
                 else if(oldAvatar == null || oldAvatar.length == 0){
                     var newAvatar = new Avatar();
@@ -214,8 +212,7 @@ function saveAvatarChanges(self){
                     }
                     newAvatar.parentId = self._id;
                     newAvatar.save(function(err){
-                        if(err)log.error(err);
-                        else log.info('avatar created: ' + self._id);
+                        if(err)console.error(err);
                     });
                 }
                 else{
@@ -231,7 +228,6 @@ activitiesSchema.pre('save', function(next){
     var self = this;
     async.waterfall([
             function(callback){
-                console.log('IN ACTIVITY PRE save: ', self.maxMembers, self.joinedUsers.length);
                 if(self.maxMembers <= self.joinedUsers.length){
                     callback(new Error('no spots left'));
                 }

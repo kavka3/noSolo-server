@@ -1,6 +1,5 @@
 var mongoose = require('../lib/db.js').mongoose,
     connection = require('../lib/db.js').connection,
-    log = require('../lib/log.js')(module),
     async = require('async'),
     common = require('../lib/commonFunctions.js'),
     //autoIncrement = require('mongoose-autoinc'),
@@ -168,12 +167,12 @@ module.exports = UserMaster = connection.model('NoSoloUser', userSchema);
 function saveAvatarChanges(self){
     UserMaster.findById(self._id, function(err, resUser, affected){
         if(err){
-            log. error(err);
+            console.error(err);
         }
         else{
             Avatar.findOne({ parentId: self._id }, function(err, oldAvatar, affected){
                 if(err){
-                    log.error(err);
+                    console.error(err);
                 }
                 else if(common.isEmpty(oldAvatar)){
                     var newAvatar = new Avatar();
@@ -185,8 +184,7 @@ function saveAvatarChanges(self){
                     }
                     newAvatar.parentId = self._id;
                     newAvatar.save(function(err){
-                        if(err)log.error(err);
-                        else log.info('avatar created: ' + self._id);
+                        if(err)console.error(err);
                     });
                 }
                 else{

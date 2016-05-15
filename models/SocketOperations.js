@@ -4,8 +4,7 @@
 var User = require('./userOperations.js'),
     ActivityOperations = require('./activitiesOperations.js'),
     common = require('../lib/commonFunctions.js'),
-    async = require('async'),
-    log = require('../lib/log.js')(module)
+    async = require('async')
 ;
 
 module.exports = {
@@ -48,12 +47,10 @@ module.exports = {
                 ],
                 function(err, activities){
                     if(err){
-                        log.error(err);
+                        console.error(err);
                         callbackDone(err);
                     }
                     else{
-                        //log.info('SOCKET My Activities: ', activities);
-                        //console.log(activities);
                         callbackDone(null, activities);
                     }
                 });

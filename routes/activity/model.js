@@ -70,7 +70,7 @@ function invite(request, response){
     }
     ActivityModel.inviteToActivity(request.body.link, request.body.creator, request.body.activityId,
         isSingle, inviteType, request.body.isParticipant, function(err, resLink, resMessage){
-            if(err){ log.error(err); response.json({result: 'error', data: err.message }); }
+            if(err){ console.error(err); response.json({result: 'error', data: err.message }); }
             else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }
         });
 };
