@@ -38,10 +38,7 @@ function createSupportChat(request, response){
         function(err, activity, chat){
             if(err){
                 console.error(err);
-                response.json({
-                    result: 'error',
-                    data: err
-                })
+                response.status(500).json({error: err.message });
             }
             else{
                 response.json({
@@ -60,10 +57,7 @@ function appCommandBase(request, response){
     AppCommands.getCommandBase(function(err, resDict){
         if(err){
             console.error(err);
-            response.json({
-                result: 'error',
-                data: 'err.message'
-            });
+            response.status(500).json({error: err.message });
         }
         else{
             response.json({
@@ -84,10 +78,7 @@ function commandDictionaryPost(request, response){
         function(err, resCmd){
             if(err){
                 console.error(err);
-                response.json({
-                    result: 'error',
-                    data: err.message
-                });
+                response.status(500).json({error: err.message });
             }
             else{
                 response.json({
@@ -96,16 +87,13 @@ function commandDictionaryPost(request, response){
                 });
             }
         })
-}
+};
 
 function commandDictionaryGet(request, response){
     AppCommands.getCmdDictionary(function(err, resDict){
         if(err){
             console.error(err);
-            response.json({
-                result: 'error',
-                data: 'err.message'
-            });
+            response.status(500).json({error: err.message });
         }
         else{
             response.json({
@@ -120,7 +108,7 @@ function reject(request, response){
     report.rejectReport(request.body.activityId, function(err){
         if(err){
             console.error(err);
-            response.json({result: 'error', data: err.message });
+            response.status(500).json({error: err.message });
         }
         else{ response.json({result: 'success', data: null }); }
     })
@@ -130,7 +118,7 @@ function proceed(request, response){
     report.proceedReport(request.body.activityId, function(err){
         if(err){
             console.error(err);
-            response.json({result: 'error', data: err.message });
+            response.status(500).json({error: err.message });
         }
         else{ response.json({result: 'success', data: null });
         }
@@ -141,7 +129,7 @@ function getReports(request, response){
     report.getReports(function(err, resReports){
         if(err){
             console.error(err);
-            response.json({result: 'error', data: err.message });
+            response.status(500).json({error: err.message });
         }
         else{
             response.json({result: 'success', data: resReports });

@@ -22,17 +22,17 @@ function minifyLink(request, response){
     var shortener = require('../lib/urlShorter.js');
     if(request.body.link != null){
         shortener.minimizeUrl(request.body.link, function(err, resLink){
-            if(err){ response.json({ result: "error", data: err }) }
+            if(err){ response.status(500).json({error: err.message }); }
             else{ response.json({ result: "success", data: resLink }) }
         })
     }
-    else{ response.json({ result: "error", data: "no link in request" }) }
+    else{ response.status(400).json({error: "no link in request" }); }
 
 };
 
 function subscribe(request, response){
     report.receiveReport(request.body.userId, request.body.activityId, 6, 'empty', function(err){
-        if(err){ response.send({result: 'error', data: err }); }
+        if(err){ response.status(500).json({error: err.message });}
         else{ response.send({result: 'success', data: null });}
     } );
 };
@@ -70,8 +70,15 @@ function invite(request, response){
     }
     ActivityModel.inviteToActivity(request.body.link, request.body.creator, request.body.activityId,
         isSingle, inviteType, request.body.isParticipant, function(err, resLink, resMessage){
-            if(err){ console.error(err); response.json({result: 'error', data: err.message }); }
-            else{ response.json({ result: 'success', data: { link: resLink, message: resMessage } }); }
+            if(err){
+                console.error(err);
+                response.status(500).json({error: err.message }); }
+            else{
+                response.json({
+                    result: 'success',
+                    data: { link: resLink, message: resMessage }
+                });
+            }
         });
 };
 
@@ -87,7 +94,7 @@ function discover(request, response){
     else{
         var message = 'not enough fields to discover';
         console.error(message);
-        response.status(500).json({ message: message });
+        response.status(400).json({ message: message });
     }
 };
 

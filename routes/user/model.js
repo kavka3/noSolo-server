@@ -18,11 +18,11 @@ module.exports = {
 function deviceUnregister(request, response){
     if(request.body.userId){
         UserModel.clearDeviceId(request.body.userId, function(err){
-            if(err){ response.json({ result: 'error', data: err }); }
+            if(err){ response.status(500).json({ message: err.message }); }
             else{ response.json({ result: 'success', data: null }); }
         })
     }
-    else{ response.json({ result: 'error', data: 'not enough fields' }); }
+    else{ response.status(400).json({message: 'not enough fields' }); }
 };
 
 function deviceRegister(request, response){
@@ -31,14 +31,14 @@ function deviceRegister(request, response){
             ,function(err){
                 if(err){
                     console.error(err);
-                    response.json({ result: 'error', data: err });
+                    response.status(500).json({error: err.message });
                 }
                 else{
                     response.json({ result: 'success', data: null });
                 }
             });
     }
-    else{ response.json({ result: 'error', data: 'not enough fields' }); }
+    else{ response.status(400).json({error: 'not enough fields' }); }
 };
 
 function checkDeviceIdFields(deviceIdObj){

@@ -18,7 +18,7 @@ module.exports = {
 
 function updateImage(request, response){
     ActivityModel.updateImage(request.body, function(err, result){
-        if(err){response.json({ result: 'error', data: error.message }); }
+        if(err){ response.status(500).json({error: err.message }); }
         else{
             var resJson = { result: 'success', data: result };
             resJson.notForCreator = true;
