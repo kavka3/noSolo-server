@@ -7,7 +7,7 @@ var async = require('async'),
     mail = require('../lib/email.js'),
     Report = require('../data/reportSchema.js'),
     Activity = require('./activitiesOperations'),
-    UserModel = require('./models/userOperations.js')
+    UserModel = require('./userOperations.js')
     ;
 
 module.exports = {
