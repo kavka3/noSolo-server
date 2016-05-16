@@ -65,7 +65,7 @@ function getReports(callbackDone){
     var query = Report
         .find({ isFinished: false })
         .populate('activityId',
-            '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish')
+            '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish formattedAddress')
         ;
     query.exec(function(err, resReports){
         if (err) { callbackDone(err); }
