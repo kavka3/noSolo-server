@@ -128,10 +128,10 @@ function getReportedDetails(reports, callback){
             else{
                 realReports.forEach(function(report){
                     report.activityId.creator = common.findWhere(resUsers, {_id: report.activityId.creator});
-                })
+                });
+                callback(null, realReports);
             }
-        })
-        callback(null, realReports);
+        });
     }
     else{ callback(null,[]); }
 };
