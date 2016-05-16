@@ -63,7 +63,7 @@ function receiveReport(userId, activityId, reportType, reportMessage, callbackDo
 
 function getReports(callbackDone){
     var query = Report
-        .find({ isFinished: false })
+        .find({ isFinished: false, reportType:{$ne: 6} })
         .populate('activityId',
             '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish formattedAddress')
         ;
@@ -106,7 +106,8 @@ function proceedReport(activityId, callbackDone){
 };
 
 function rejectReport(activityId, callbackDone){
-    Report.update({activityId: activityId},{isFinished: true}, {multi: true}, function(err, resReports){
+    Report.update({ activityId: activityId },{ isFinished: true }, { multi: true },
+        function(err, resReports){
         if(err){ callbackDone(err); }
         else{
             callbackDone(null, resReports);
