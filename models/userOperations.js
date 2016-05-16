@@ -21,7 +21,15 @@ module.exports = {
     universalUserSearch: universalUserSearch,
     saveDeviceId: saveDeviceId,
     clearDeviceId: clearDeviceId,
-    createFbUser: createFbUser
+    createFbUser: createFbUser,
+    getByList: getByList
+};
+
+function getByList(userIds, callback){
+    User.find({_id:{$in: userIds}}, function(err, resUsers){
+        if(err){ callback(err); }
+        else{ callback(null, resUsers); }
+    })
 };
 
 function getMinAge(userBirthday){

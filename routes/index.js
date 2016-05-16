@@ -1,7 +1,5 @@
 
 module.exports = function(app){
-    //returns to app link to server and redirect server depends on app version
-    app.get('/connection', require('./services/connection.js'));
     //returns user or create new one if not exists
     //TODO add user authentication and session management on sign in sign out and delete
     app.post('/signIn', require('./user/crud.js').signIn);
@@ -49,6 +47,8 @@ module.exports = function(app){
     app.post('/get_subscribe', require('./activity/model.js').subscribe);
 
     app.post('/minifyLink', require('./activity/model.js').minifyLink);
+    //returns to app link to server and redirect server depends on app version
+    app.get('/connection', require('./services/connection.js'));
    //returns reported activities
     app.get('/get_reports', require('./services/services.js').getReports);
 

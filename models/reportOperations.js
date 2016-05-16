@@ -3,9 +3,11 @@
  */
 
 var async = require('async'),
+    common = require('../lib/commonFunctions.js'),
     mail = require('../lib/email.js'),
-    Report = require('./../data/reportSchema.js'),
-    Activity = require('./activitiesOperations')
+    Report = require('../data/reportSchema.js'),
+    Activity = require('./activitiesOperations'),
+    UserModel = require('./models/userOperations.js')
     ;
 
 module.exports = {
@@ -66,17 +68,15 @@ function getReports(callbackDone){
             '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish')
         ;
     query.exec(function(err, resReports){
-        if (err) {
-            callbackDone(err);
-        }
+        if (err) { callbackDone(err); }
         else {
-            callbackDone(null, resReports);
+            getReportedDetails(resReports, function(err, resReports){
+                if(err){ callbackDone(err); }
+                else{ callbackDone(null, resReports); }
+            });
         }
     })
-    /*Report.find({isFinished: false}, function(err, resReports){
-     if(err){ callbackDone(err); }
-     else{ callbackDone(null, resReports); }
-     })*/
+
 };
 
 function proceedReport(activityId, callbackDone){
@@ -112,4 +112,26 @@ function rejectReport(activityId, callbackDone){
             callbackDone(null, resReports);
         }
     })
+};
+
+function getReportedDetails(reports, callback){
+    var realReports = reports.filter(function(report){
+        return (!common.isEmpty(report.activityId));
+    });
+    if(!common.isEmpty(realReports)){
+        realReports = common.deepObjClone(realReports);
+        var userIds = realReports.map(function(report){
+            return report.activityId.creator;
+        });
+        UserModel.getByList(userIds, function(err, resUsers){
+            if(err){ callback(err); }
+            else{
+                realReports.forEach(function(report){
+                    report.activityId.creator = common.findWhere(resUsers, {_id: report.activityId.creator});
+                })
+            }
+        })
+        callback(null, realReports);
+    }
+    else{ callback(null,[]); }
 };

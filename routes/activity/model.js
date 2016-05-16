@@ -41,12 +41,12 @@ function reportPost(request, response){
     if(!checkReportFields(request.body)){
         report.receiveReport(request.body.userId, request.body.activityId,
             request.body.type, request.body.message, function(err){
-                if(err){ response.send({result: 'error', data: err }); }
+                if(err){ response.status(500).json({ error: err.message }); }
                 else{ response.send({result: 'success', data: null });}
             } );
     }
-    else{ response.send({result: 'error', data: 'Not enough fields for report' }); }
-};
+    else{ response.status(400).json({ error: 'Not enough fields for report' }); }
+    };
 
 function checkReportFields(obj){
     if(common.isEmpty(obj.userId) || common.isEmpty(obj.activityId) || common.isEmpty(obj.type)
