@@ -92,7 +92,8 @@ module.exports = {
     createActivity: createActivity,
     inviteToActivity: inviteToActivity,
     acceptInvite: acceptInvite,
-    createWelcomeActivity: createWelcomeActivity
+    createWelcomeActivity: createWelcomeActivity,
+    getUserActivitiesIds: getUserActivitiesIds
 };
 
 (function checkDictionary(){
@@ -106,6 +107,17 @@ module.exports = {
         })
     }
 }());
+
+function getUserActivitiesIds(userId, callback){
+    Activity.find({joinedUsers: userId}, '_id creator', function (err, ids) {
+        if (err) {
+            callback(err);
+        }
+        else {
+            callback(null, ids);
+        }
+    });
+};
 
 function findActivity(activityId, callback) {
     Activity.findById(activityId, function (err, resActivity) {

@@ -2,7 +2,8 @@ var async = require('async'),
     connection = require('../lib/db.js').connection,
     common = require('../lib/commonFunctions.js'),
     User = connection.model('NoSoloUser'),
-    UserLocation = require('./../data/userLocationSchema.js'),
+    blockedUser = require('../data/blockedUserSchema.js'),
+    UserLocation = require('../data/userLocationSchema.js'),
     FB = require('fb'),
     YEARMILLS = 31557600000,//24 * 3600 * 365.25 * 1000,
 
@@ -22,7 +23,17 @@ module.exports = {
     saveDeviceId: saveDeviceId,
     clearDeviceId: clearDeviceId,
     createFbUser: createFbUser,
-    getByList: getByList
+    getByList: getByList,
+    addToBlockList: addToBlockList
+};
+
+
+function addToBlockList(userId, callback){
+    var blockedUserToAdd = new blockedUser({userId:userId});
+    blockedUserToAdd.save(function(err, result){
+        if(err){callback(err)}
+        else{ callback(null, result); }
+    })
 };
 
 function getByList(userIds, callback){
@@ -211,7 +222,6 @@ function signIn(userArgs, callbackDone){
                         callback(null, editedUser);
                     }
                 })
-
             }
         ],
         function(err, resUser){
@@ -224,10 +234,12 @@ function signIn(userArgs, callbackDone){
 function deleteUser(userId, callback){
     User.findById(userId, function(err, user) {
         if (err){ callback(err); }
-        else{ user.remove(function(err, obj){
+        else if(user){ user.remove(function(err, obj){
                 if(err) { callback(err); }
                 else{ callback(null); }
-            }) }
+            })
+        }
+        else{ callback(null); }
 
     });
 };
@@ -305,7 +317,6 @@ function clearDeviceId(userId, callback){
             else{ callback(null); }
         });
 };
-
 
 
 

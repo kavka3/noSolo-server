@@ -8,8 +8,8 @@ var express = require('express'),
 
 var app = express();
 app.set('port', (process.env.PORT || 5000));
-app.enable('trust proxy');
 
+app.enable('trust proxy');
 app.use(function (req, res, next) {
   // Website you wish to allow to connect
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,7 +24,6 @@ app.use(function (req, res, next) {
   next();
 });
 
-
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -32,7 +31,7 @@ app.use(express.cookieParser());
 
 app.use(app.router);
 require('./routes')(app);
-app.use(express.static(path.join(__dirname, 'public')));
+
 
 var server = http.createServer(app);
 server.listen(app.get('port'), function(){

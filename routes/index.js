@@ -20,6 +20,8 @@ module.exports = function(app){
 
     app.post('/device_unregister', require('./user/model.js').deviceUnregister);
 
+    app.post('/block_users', require('./user/crud.js').block);
+
     app.post('/create_tag', require('./tag/crud.js').create);
     //returns all tags sorted by language
     app.post('/tag_dictionary', require('./tag/crud.js').dictionary);
@@ -65,4 +67,5 @@ module.exports = function(app){
     app.post('/support_chat', require('./services/services.js').updateSupportChat);
 
     app.post('/admin_chat', require('./services/services.js').createSupportChat);
+
 };

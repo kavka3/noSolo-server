@@ -7,7 +7,8 @@ var async = require('async'),
     mail = require('../lib/email.js'),
     Report = require('../data/reportSchema.js'),
     Activity = require('./activitiesOperations'),
-    UserModel = require('./userOperations.js')
+    UserModel = require('./userOperations.js'),
+    SUBSCRIBE_TYPE = 6
     ;
 
 module.exports = {
@@ -24,7 +25,7 @@ function receiveReport(userId, activityId, reportType, reportMessage, callbackDo
                 var report = new Report({ userId: userId,  activityId: activityId,
                     reportType: reportType, message: reportMessage });
                 var message = '';
-                if(reportType != 6){
+                if(reportType != SUBSCRIBE_TYPE ){
                     message = 'Hey we got report message from: ' + userId + ' about activity: ' + activityId
                         + ' with a type and text: ' + reportType + ' ' + reportMessage;
                 }
@@ -63,7 +64,7 @@ function receiveReport(userId, activityId, reportType, reportMessage, callbackDo
 
 function getReports(callbackDone){
     var query = Report
-        .find({ isFinished: false, reportType:{$ne: 6} })
+        .find({ isFinished: false, reportType:{$ne: SUBSCRIBE_TYPE } })
         .populate('activityId',
             '_id title description imageUrl location creator tags tagsByLanguage timeStart timeFinish formattedAddress')
         ;

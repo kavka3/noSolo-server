@@ -29,8 +29,7 @@ var userSchema = new Schema({
         required: true
     },
     birthDate: {
-        type: Date/*,
-        required: true*/
+        type: Date
     },
     gender: {
         type: String,
@@ -140,10 +139,6 @@ var userSchema = new Schema({
     lastActivityUrl:{
         type: String,
         default: 'https://s3.amazonaws.com/nosoloimages/adefault.png'
-    },
-    currentLocation:{
-        type: [Number],
-        index: '2dsphere'
     },
     activityJoinedNumber:{
         type:Number,
