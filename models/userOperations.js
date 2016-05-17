@@ -148,6 +148,19 @@ function signIn(userArgs, callbackDone){
             },
             function(resUser, callback){
                 if(common.isEmpty(resUser)){
+                    //find user in blockedUserd
+                    findBlockedUser(userArgs._id, function (err, blockedUser){
+                        if (err) { callback(err); }
+                        else if(common.isEmpty(blockedUser)){
+                            callback(null, null);
+                        }
+                        else { callback(new Error('blocked user')); }
+                    });
+                }
+                else{ callback(null, resUser); }
+            },
+            function(resUser, callback){
+                if(common.isEmpty(resUser)){
                     if(checkFields(userArgs)) {
                         isSignUp = true;
                         var savingUser = new User(userArgs);
@@ -225,7 +238,10 @@ function signIn(userArgs, callbackDone){
             }
         ],
         function(err, resUser){
-            if(err){ callbackDone(err); }
+            if(err){
+                console.error(err);
+                callbackDone(err);
+            }
             else{ callbackDone(null, resUser, isSignUp); }
         });
 
@@ -316,6 +332,13 @@ function clearDeviceId(userId, callback){
             if(err){ callback(err); }
             else{ callback(null); }
         });
+};
+
+function findBlockedUser(userId, callback){
+    blockedUser.find({ userId: userId }, function (err, result) {
+        if (err) { callback(err); }
+        else{ callback(null, result); }
+    });
 };
 
 

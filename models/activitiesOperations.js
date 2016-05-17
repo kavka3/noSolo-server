@@ -201,7 +201,7 @@ function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
                     })
             },
             function (activity, callback) {
-                User.findByIdAndUpdate(userId, {$pull: {activitiesJoined: mongoose.Types.ObjectId(activityId)}},
+                User.findByIdAndUpdate(userId, {$pull: {activitiesJoined: activityId}},
                     {new: true}, function (err, changedUser) {
                         if (err) {
                             callback(err);
