@@ -428,7 +428,9 @@ function discover(location, user, callbackDone){
                 .populate('joinedUsers', JOINED_USERS_FIELDS)
                 .populate('creator', CREATOR_FIELDS)
                 .populate('followingUsers', JOINED_USERS_FIELDS)
+                // .sort('priority')
             ;
+
             query.exec(function(err, resActivities){
                 if (err) { callback(err); }
                 else {
@@ -437,7 +439,8 @@ function discover(location, user, callbackDone){
                 }
             })
         },
-    ], function(err, activities){
+    ],
+    function(err, activities){
         if(err){ callbackDone(err); }
         else{ callbackDone(null, activities); }
     })
@@ -455,16 +458,26 @@ function convertTags(activities){
 };
 
 function prepareActivities(activities){
+    var priorityArr = [],
+        distanceArr = [];
     var res = [];
     for(var i = 0; i < activities.length; i++){
         if(activities[i].joinedUsers.length < activities[i].maxMembers ){
             var actObj = common.deepObjClone(activities[i]);
             delete actObj['tagsByLanguage'];
             actObj.tags = activities[i]['tagsByLanguage'];
-            res.push(actObj);
+
+            if(activities[i].priority){
+                priorityArr.push(actObj)
+            }
+            else {
+                distanceArr.push(actObj)
+            }
         }
     }
-    return res;
+    priorityArr.sort(function(a, b){return b.priority-a.priority})
+
+    return priorityArr.concat(distanceArr);
 };
 
 function createActivity(activity, callbackDone){

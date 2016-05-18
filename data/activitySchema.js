@@ -30,6 +30,9 @@ var activitiesSchema = new Schema({
         index: '2dsphere',
         required: true
     },
+    priority: {
+      type: Number
+    },
     creator : {
         type: String ,
         ref: 'NoSoloUser',
@@ -243,13 +246,3 @@ activitiesSchema.pre('save', function(next){
         else{ next(); }
     });
 });
-
-
-
-
-
-
-
-
-
-
