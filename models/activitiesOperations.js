@@ -84,6 +84,7 @@ module.exports = {
     universalActivitySearch: universalActivitySearch,
     //changes any criteria in existing activity, !but not working with arrays now!
     universalActivityUpdate: universalActivityUpdate,
+    prepareToRepublish: prepareToRepublish,
     updateImage: updateImage,
     discover: discover,
     removeUserFromActivity: removeUserFromActivity,
@@ -326,8 +327,8 @@ function updateImage(activity, callback){
         });
 };
 
-function universalActivityUpdate(activityObj, callback){
-    Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true, upsert: true})
+function universalActivityUpdate(activityObj, isRepublish, callback){
+    Activity.findByIdAndUpdate(activityObj._id, activityObj, {new: true})
         .populate('creator', CREATOR_FIELDS)
         .populate('joinedUsers', JOINED_USERS_FIELDS)
         .populate('followingUsers', JOINED_USERS_FIELDS)
@@ -340,7 +341,9 @@ function universalActivityUpdate(activityObj, callback){
             else{
                 var activityClone = common.deepObjClone(resAct);
                 activityClone['tags'] = common.convertTags(resAct.tags, resAct.creator.systemLanguage);
-                sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                if(!isRepublish){
+                    sendUpdateNtf(activityClone, activityObj['creatorName'], activityObj['changedField'], activityObj);
+                }
                 callback(null, activityClone);
             }
         })
@@ -388,6 +391,41 @@ function prepareToUpdate(obj){
         delete resObj.tags;
         delete resObj.tagsByLanguage;
         delete resObj.joinedUsers;
+    }
+    else if(!common.isEmpty(resObj.tags)){
+        var arr = [];
+        for(var i = 0; i < obj.tags.length; i++){
+            if(obj.tags[i]._title != undefined){
+                arr.push(obj.tags[i]._title);
+            }
+        }
+        resObj.tagsByLanguage = obj.tags;
+        if(!common.isEmpty(arr)){ resObj.tags = arr; }
+        var tagsByLang = [];
+        for(var i = 0; i < obj.tags.length; i++){
+            var tagObj = {};
+            tagObj['name'] = obj.tags[i]['name'];
+            tagObj['imageUrl'] = obj.tags[i]['imageUrl'];
+            tagObj['tagCategory'] = obj.tags[i]['tagCategory'];
+            tagObj['_title'] = obj.tags[i]['_title'];
+            tagsByLang.push(tagObj);
+        }
+        resObj.tagsByLanguage = tagsByLang;
+    }
+    return resObj;
+};
+
+function prepareToRepublish(obj){
+    var resObj = common.deepObjClone(obj); // because obj is immutable
+    delete resObj['$$hashKey']; // inturpts with mongoDB ($)
+    resObj.creator = obj.creator._id;
+    resObj.joinedUsers = resObj.joinedUsers.map(function(user){
+        return user._id;
+    })
+    if(resObj.tags && resObj.tags.length == 0){
+        delete resObj.tags;
+        delete resObj.tagsByLanguage;
+        // delete resObj.joinedUsers;
     }
     else if(!common.isEmpty(resObj.tags)){
         var arr = [];

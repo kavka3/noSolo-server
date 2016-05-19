@@ -49,12 +49,13 @@ var activitiesSchema = new Schema({
         type: String,
         ref: 'NoSoloUser'
     }],
-    followingUsers: [{
+    outOnceUsers: [{
         type: String,
         ref: 'NoSoloUser'
     }],
-    recurUsers: [{
-        type: Schema.Types.Mixed //userId, recurStatus: NOT_APPROVED: 0, JOINED: 1, DISCLAIMED: 2
+    pendingUsers: [{
+      type: String,
+      ref: 'NoSoloUser'
     }],
     timeStart: {
         type: Date,
