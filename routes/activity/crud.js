@@ -78,6 +78,15 @@
               }
           },
           function(activityObj, isRepublish, callback){
+              if(!isRepublish) {
+                  callback(null, activityObj, isRepublish)
+              }
+              else {
+                  activityObj = removeUsersFromActivity(activityObj);
+                  callback(null, activityObj, isRepublish);
+              }
+          },
+          function(activityObj, isRepublish, callback){
               if(isRepublish){
                   ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
                       if(err){ callback(err); }
@@ -164,13 +173,29 @@
       for(var index in activity.joinedUsers){
           if(activity.creator == activity.joinedUsers[index]){
             creatorId = activity.joinedUsers[index];
-            break;
           }
+
       }
       activity.pendingUsers = _.without(activity.joinedUser, creatorId);
-      activity.joinedUsers = [creatorId];
 
       return activity;
+  }
+
+  function removeUsersFromActivity(activity, callback){
+      var activityObj = activity;
+
+      for(var index in activity.joinedUsers){
+          if(activity.creator != activity.joinedUsers[index]){
+            ActivityModel.removeUserFromActivity(activity._id, activity.joinedUsers[index], false,
+                function(err, newActivity){
+                    if(err){ callback(err); }
+                    else{ activityObj = newActivity}
+                });
+          }
+      }
+
+      return activityObj;
+
   }
 
   function checkIfEmpty(obj){
