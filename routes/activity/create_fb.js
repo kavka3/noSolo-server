@@ -6,7 +6,8 @@ var activityModel = require('../../models/activitiesOperations.js'),
     userModel = require('../../models/userOperations.js'),
     async = require('async'),
     upload = require('../../lib/uploadImages.js'),
-    common = require('../../lib/commonFunctions.js')
+    common = require('../../lib/commonFunctions.js'),
+    Socket = require('../../lib/socket.js')
 ;
 
 module.exports = function createFbActivities(req, res){
@@ -31,6 +32,7 @@ module.exports = function createFbActivities(req, res){
                                     return activity.fbId;
                                 });
                                 var toCreateIds = common.getArraysDifference(activityIds, existIds);
+                                var toUpdateIds = [];
                                 if(!common.isEmpty(toCreateIds)){
                                     toCreate = allActivities.filter(function(activity){
                                         return toCreateIds.indexOf(activity.fbId) > -1;
@@ -42,7 +44,8 @@ module.exports = function createFbActivities(req, res){
                                 });
                                 if(!common.isEmpty(toUpdateObjs)){
                                     toUpdateIds = toUpdateObjs.map(function(activity){
-                                        return activity._id;
+                                        console.log('activity', activity.fbId);
+                                        return activity;
                                     });
                                 }
                                 callback(null, userId, toCreate, toUpdateIds);
@@ -86,14 +89,37 @@ module.exports = function createFbActivities(req, res){
     });
 };
 
-function updateIterator(userId, resActs, activityId, callbackUI){
-    activityModel.userIn(userId, activityId, function(err, activity){
-        if(err){ callbackUI(null); }
-        else{
-            resActs.push(activity);
-            callbackUI(null);
-        }
-    });
+function updateIterator(userId, resActs, activity, callbackUI){
+
+  activityModel.universalActivitySearch("fbId", activity.fbId, function (err, activityObj) {
+      if (err) { console.log('err',err); }
+      else if (!common.isEmpty(activityObj)) {
+
+          console.log('activityObj._id', activityObj[0]._id);
+
+          activity._id = activityObj[0]._id;
+
+          activityModel.universalActivityUpdate(activity, true, function(err, resAct){
+              if(err){ callbackUI(null); }
+              else{
+                  var resJson = {
+                      result: 'success',
+                      data: resAct
+                  };
+                  resJson.notForCreator = true;
+                  // Socket.sendMyActivityRepublish(resAct._id, resJson);
+                  Socket.sendMyActivityUpdate(resAct._id, resJson);
+                  activityModel.userIn(userId, activity._id, function(err, activity){
+                      if(err){ callbackUI(null); }
+                      else{
+                          resActs.push(activity);
+                          callbackUI(null);
+                      }
+                  });
+              }
+          });
+      }
+  });
 };
 
 function createIterator(userId, resActs, toCreate, callbackCI){
@@ -103,7 +129,7 @@ function createIterator(userId, resActs, toCreate, callbackCI){
                 userModel.findUser(toCreate.creator._id, function(err, resUser){
                     if(err){ callback(err); }
                     else if(!common.isEmpty(resUser)){ callback(null, resUser); }
-                    else{
+                    else {
                         createFakeUser(toCreate.creator, 'faceBook', function(err, resUser){
                             if(err){ callback(err); }
                             else{ callback(null, resUser); }
