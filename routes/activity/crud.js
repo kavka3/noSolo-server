@@ -81,69 +81,26 @@
 
   function updateNew(request, response){
     async.waterfall([
-        function(callback){
-            checkActivityFieldsUpd(request.body, function(err, activityObj, isRepublish){
-                if(err){ callback(err); }
-                else{ callback(null, activityObj, isRepublish) }
-            })
-        },
-        function(activityObj, isRepublish, callback){
-            if(!isRepublish) {
-                callback(null, activityObj, isRepublish)
-            }
-            else {
-                activityObj = changeUserStatus(activityObj);
-                callback(null, activityObj, isRepublish)
-            }
-        },
-        function(activityObj, isRepublish, callback){
-            if(!isRepublish) {
-                callback(null, activityObj, isRepublish)
-            }
-            else {
-                activityObj = removeUsersFromActivity(activityObj);
-                callback(null, activityObj, isRepublish);
-            }
-        },
-        function(activityObj, isRepublish, callback){
-            if(isRepublish){
-                ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
-                    if(err){ callback(err); }
-                    else{
-                        var resJson = {
-                            result: 'success',
-                            data: resAct
-                        };
-                        resJson.notForCreator = true;
-                        Socket.sendMyActivityRepublish(resAct._id, resJson);
-                        callback(null, null, isRepublish, resJson);
-                  }
-                })
-            }
-            else{
-                callback(null, activityObj, isRepublish, null)
-            }
-
-        },
-        function(activityObj, isRepublish, resJson, callback){
-          if(!isRepublish){
-            ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
-                if(err){ callback(err); }
-                else{
-                    var resJson = {
-                        result: 'success',
-                        data: resAct
-                    };
-                    resJson.notForCreator = true;
-                    Socket.sendMyActivityUpdate(resAct._id, resJson);
-                    callback(null, resJson);
-                }
-            })
-          }
-          else {
-              callback(null, resJson);
-          }
-        }
+      function(callback){
+          checkActivityFieldsUpd(request.body, function(err, activityObj){
+              if(err){ callback(err); }
+              else{ callback(null, activityObj) }
+          })
+      },
+      function(activityObj, callback){
+          ActivityModel.universalActivityUpdate(activityObj, false, function(err, resAct){
+              if(err){ callback(err); }
+              else{
+                  var resJson = {
+                      result: 'success',
+                      data: resAct
+                  };
+                  resJson.notForCreator = true;
+                  Socket.sendMyActivityUpdate(resAct._id, resJson);
+                  callback(null, resJson);
+              }
+          })
+      }
     ],
         function(err, result){
         if(err){
