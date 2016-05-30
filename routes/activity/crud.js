@@ -261,7 +261,7 @@
 
       for(var index in activity.joinedUsers){
           if(activity.creator != activity.joinedUsers[index]){
-            ActivityModel.removeUserFromActivity(activity._id, activity.joinedUsers[index], false,
+            ActivityModel.removeUserFromActivity(activity._id, activity.joinedUsers[index], false, true,
                 function(err, newActivity){
                     if(err){ callback(err); }
                     else{

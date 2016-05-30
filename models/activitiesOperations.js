@@ -164,7 +164,7 @@ function deleteActivity(activityId, callback) {
     });
 };
 
-function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
+function removeUserFromActivity(activityId, userId, isRemove, isRepublish, callbackDone) {
     async.waterfall([
             function (callback) {
                 Activity.findByIdAndUpdate(activityId,
@@ -209,7 +209,10 @@ function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
                         }
                         else {
                             Socket.removeFromChat(userId, activityId);
-                            leaveActivity(activity, changedUser);
+                            if(isRepublish)
+                                republishActivity(activity, changedUser);
+                            else
+                                leaveActivity(activity, changedUser);
                             callback(null, activity, changedUser);
                         }
                     });
@@ -232,6 +235,12 @@ function removeUserFromActivity(activityId, userId, isRemove, callbackDone) {
             if (err) { callbackDone(err); }
             else { callbackDone(null, activity); }
         })
+};
+
+function republishActivity(activity, user){
+    var message = 'Activity was republished';
+    var pushMessage = activity.title + 'was republished';
+    Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, true, pushMessage);
 };
 
 function leaveActivity(activity, user){

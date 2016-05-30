@@ -65,7 +65,7 @@ function enter(request, response){
 };
 
 function leave(request, response){
-    ActivityModel.removeUserFromActivity(request.body.activityId, request.body.userId, false, function(err, result){
+    ActivityModel.removeUserFromActivity(request.body.activityId, request.body.userId, false, false, function(err, result){
         var resJson = {};
         if(err){
             console.error(err);
@@ -83,7 +83,7 @@ function leave(request, response){
 };
 
 function removeUser(request, response){
-    ActivityModel.removeUserFromActivity(request.body.activityId, request.body.userId, true, function(err, resultActivity){
+    ActivityModel.removeUserFromActivity(request.body.activityId, request.body.userId, true, false,function(err, resultActivity){
         var resJson = {};
         if(err){
             console.error(err);
