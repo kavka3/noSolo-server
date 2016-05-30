@@ -61,79 +61,154 @@
   };
 
   function update(request, response){
-      async.waterfall([
-          function(callback){
-              checkActivityFieldsUpd(request.body, function(err, activityObj, isRepublish){
-                  if(err){ callback(err); }
-                  else{ callback(null, activityObj, isRepublish) }
-              })
-          },
-          function(activityObj, isRepublish, callback){
-              if(!isRepublish) {
-                  callback(null, activityObj, isRepublish)
-              }
-              else {
-                  activityObj = changeUserStatus(activityObj);
-                  callback(null, activityObj, isRepublish)
-              }
-          },
-          function(activityObj, isRepublish, callback){
-              if(!isRepublish) {
-                  callback(null, activityObj, isRepublish)
-              }
-              else {
-                  activityObj = removeUsersFromActivity(activityObj);
-                  callback(null, activityObj, isRepublish);
-              }
-          },
-          function(activityObj, isRepublish, callback){
-              if(isRepublish){
-                  ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
-                      if(err){ callback(err); }
-                      else{
-                          var resJson = {
-                              result: 'success',
-                              data: resAct
-                          };
-                          resJson.notForCreator = true;
-                          Socket.sendMyActivityRepublish(resAct._id, resJson);
-                          callback(null, null, isRepublish, resJson);
-                    }
-                  })
-              }
-              else{
-                  callback(null, activityObj, isRepublish, null)
-              }
 
-          },
-          function(activityObj, isRepublish, resJson, callback){
-            if(!isRepublish){
-              ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
-                  if(err){ callback(err); }
-                  else{
-                      var resJson = {
-                          result: 'success',
-                          data: resAct
-                      };
-                      resJson.notForCreator = true;
-                      Socket.sendMyActivityUpdate(resAct._id, resJson);
-                      callback(null, resJson);
-                  }
-              })
+      checkActivityFieldsUpd(request.body,
+          function(err, activityObj, isRepublish){
+              if(err) {
+                  console.error(err);
+                  response.status(500).json({ message: err.message });
+              }
+              else {
+                  if(isRepublish)
+                      republish(request, response);
+                  else
+                      updateNew(request, response);
+              }
+          }
+      )
+      return;
+  };
+
+  function updateNew(request, response){
+    async.waterfall([
+        function(callback){
+            checkActivityFieldsUpd(request.body, function(err, activityObj, isRepublish){
+                if(err){ callback(err); }
+                else{ callback(null, activityObj, isRepublish) }
+            })
+        },
+        function(activityObj, isRepublish, callback){
+            if(!isRepublish) {
+                callback(null, activityObj, isRepublish)
             }
             else {
-                callback(null, resJson);
+                activityObj = changeUserStatus(activityObj);
+                callback(null, activityObj, isRepublish)
             }
+        },
+        function(activityObj, isRepublish, callback){
+            if(!isRepublish) {
+                callback(null, activityObj, isRepublish)
+            }
+            else {
+                activityObj = removeUsersFromActivity(activityObj);
+                callback(null, activityObj, isRepublish);
+            }
+        },
+        function(activityObj, isRepublish, callback){
+            if(isRepublish){
+                ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
+                    if(err){ callback(err); }
+                    else{
+                        var resJson = {
+                            result: 'success',
+                            data: resAct
+                        };
+                        resJson.notForCreator = true;
+                        Socket.sendMyActivityRepublish(resAct._id, resJson);
+                        callback(null, null, isRepublish, resJson);
+                  }
+                })
+            }
+            else{
+                callback(null, activityObj, isRepublish, null)
+            }
+
+        },
+        function(activityObj, isRepublish, resJson, callback){
+          if(!isRepublish){
+            ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
+                if(err){ callback(err); }
+                else{
+                    var resJson = {
+                        result: 'success',
+                        data: resAct
+                    };
+                    resJson.notForCreator = true;
+                    Socket.sendMyActivityUpdate(resAct._id, resJson);
+                    callback(null, resJson);
+                }
+            })
           }
-      ],
-          function(err, result){
-          if(err){
-              console.error(err);
-              response.status(500).json({ message: err.message });
+          else {
+              callback(null, resJson);
           }
-          else{ response.json(result); }
-      });
-  };
+        }
+    ],
+        function(err, result){
+        if(err){
+            console.error(err);
+            response.status(500).json({ message: err.message });
+        }
+        else{ response.json(result); }
+    });
+  }
+
+  function republish(request, response){
+    // 1. Request Activity_Republish (async [])
+    //    1.1. Validate Activity Object (checkActivityFieldsUpd)
+    //    1.2. Clone Activity To Object (prepareToRepublish)
+    //    1.3. Change members status (changeUserStatus) + (removeUsersFromActivity)
+    //    1.4. Update Activity in database (universalActivityUpdate)\
+    //    1.5. Notify User (sendMyActivityUpdate)
+    // 2. Reponse Activity_Republish (async final)
+    async.waterfall([
+      function(callback){
+        checkActivityFieldsUpd(request.body, function(err, activityObj, isRepublish){
+            if(err){ callback(err); }
+            else{ callback(null, activityObj, isRepublish) }
+        });
+      },
+      function(activityObj, isRepublish, callback){
+            activityObj = changeUserStatus(activityObj);
+            callback(null, activityObj, isRepublish)
+      },
+      function(activityObj, isRepublish, callback){
+            removeUsersFromActivity(activityObj,
+                function(err, updatedActivity){
+                    if(err) { callback(err); }
+                    else {
+                      callback(null, updatedActivity, isRepublish);
+                    }
+                }
+            );
+      },
+      function(activityObj, isRepublish, callback){
+            ActivityModel.universalActivityUpdate(activityObj, isRepublish, function(err, resAct){
+                if(err){ callback(err); }
+                else{
+                    var resJson = {
+                        result: 'success',
+                        data: resAct
+                    };
+                    resJson.notForCreator = true;
+                    Socket.sendMyActivityRepublish(resAct._id, resJson);
+                    callback(null, resJson);
+              }
+            })
+      }
+    ],
+      function(err, result){
+        if(err){
+            console.error(err);
+            response.status(500).json({ message: err.message });
+        }
+        else {
+          response.json(result);
+        }
+      }
+    );
+  }
 
   function checkActivityFieldsUpd(obj, callbackDone){
       var checkFields = checkIfEmpty(obj);
@@ -168,7 +243,7 @@
   function changeUserStatus(activityObj){
       var activity = common.deepObjClone(activityObj);
 
-      var creatorId;
+      var creatorId = activity.joinedUsers[0];
 
       for(var index in activity.joinedUsers){
           if(activity.creator == activity.joinedUsers[index]){
@@ -176,7 +251,7 @@
           }
 
       }
-      activity.pendingUsers = _.without(activity.joinedUser, creatorId);
+      activity.pendingUsers = _.without(activity.joinedUsers, creatorId);
 
       return activity;
   }
@@ -189,7 +264,10 @@
             ActivityModel.removeUserFromActivity(activity._id, activity.joinedUsers[index], false,
                 function(err, newActivity){
                     if(err){ callback(err); }
-                    else{ activityObj = newActivity}
+                    else{
+                      activityObj = newActivity;
+                      callback(err, activityObj);
+                    }
                 });
           }
       }
