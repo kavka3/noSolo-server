@@ -270,10 +270,10 @@
                     }
                 });
           }
+          else {
+            callback(null, activityObj);
+          }
       }
-
-      return activityObj;
-
   }
 
   function checkIfEmpty(obj){
