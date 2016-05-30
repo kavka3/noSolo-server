@@ -240,8 +240,8 @@ function removeUserFromActivity(activityId, userId, isRemove, isRepublish, callb
 
 function republishActivity(activity, user){
     var message = 'Activity was republished';
-    var pushMessage = activity.title + 'was republished';
-    Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, true, pushMessage);
+    var pushMessage = activity.title + ' was republished';
+    Socket.sendToChat(NOSOLO_ID, NOSOLO_NAME, activity._id, message, false, false, pushMessage);
 };
 
 function leaveActivity(activity, user){
