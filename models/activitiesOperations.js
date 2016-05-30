@@ -211,7 +211,7 @@ function removeUserFromActivity(activityId, userId, isRemove, isRepublish, callb
                         else {
                             Socket.removeFromChat(userId, activityId);
                             if(isRepublish)
-                                republishActivity(activity, changedUser);
+                                // republishActivity(activity, changedUser);
                             else
                                 leaveActivity(activity, changedUser);
                             callback(null, activity, changedUser);
