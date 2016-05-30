@@ -15,6 +15,7 @@
         commandDictionary = require('./serverDictionaryOperations.js').dictionary,
         createMessage = require('./serverDictionaryOperations.js').createMessage,
         urlShorter = require('../lib/urlShorter.js'),
+        _ = require('underscore'),
 
         RADIUS = 6371,//earth radius in km
         DELAY = 2000,
@@ -481,7 +482,7 @@ function discover(location, user, callbackDone){
             query.exec(function(err, resActivities){
                 if (err) { callback(err); }
                 else {
-                    var activities = prepareActivities(resActivities);
+                    var activities = prepareActivities(resActivities, user._id);
                     callback(null, activities);
                 }
             })
@@ -504,7 +505,7 @@ function convertTags(activities){
     return res;
 };
 
-function prepareActivities(activities){
+function prepareActivities(activities, userId){
     var priorityArr = [],
         distanceArr = [];
     var res = [];
@@ -514,11 +515,11 @@ function prepareActivities(activities){
             delete actObj['tagsByLanguage'];
             actObj.tags = activities[i]['tagsByLanguage'];
 
-            if(activities[i].priority){
-                priorityArr.push(actObj)
+            if(activities[i].priority && isUserPending(activities[i].pendingUsers, userId)){
+                priorityArr.push(actObj);
             }
             else {
-                distanceArr.push(actObj)
+                distanceArr.push(actObj);
             }
         }
     }
@@ -526,6 +527,10 @@ function prepareActivities(activities){
 
     return priorityArr.concat(distanceArr);
 };
+
+function isUserPending(pendingUsers, userId){
+   return _.contains(pendingUsers, userId);
+}
 
 function createActivity(activity, callbackDone){
     async.waterfall([

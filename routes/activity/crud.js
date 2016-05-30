@@ -252,6 +252,7 @@
 
       }
       activity.pendingUsers = _.without(activity.joinedUsers, creatorId);
+      activity.priority = 10;
 
       return activity;
   }
