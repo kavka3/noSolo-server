@@ -1,0 +1,52 @@
+{
+  "name": "noSolo-server-dev",
+  "description": "",
+  "scripts": {
+  },
+  "env": {
+    "AWS_ACCESS_KEY": {
+      "required": true
+    },
+    "AWS_SECRET_KEY": {
+      "required": true
+    },
+    "FB_CLIENT_ID": {
+      "required": true
+    },
+    "FB_CLIENT_SECRET": {
+      "required": true
+    },
+    "GCM_Sender": {
+      "required": true
+    },
+    "GOOGLE_API_KEY": {
+      "required": true
+    },
+    "MONGOLAB_URI": {
+      "required": true
+    },
+    "S3_BUCKET": {
+      "required": true
+    },
+    "TINY_API_KEY": {
+      "required": true
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
+  "addons": [
+    "flydata",
+    "rediscloud",
+    "mongohq",
+    "mongolab",
+    "sendgrid"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
