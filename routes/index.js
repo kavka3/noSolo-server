@@ -1,5 +1,5 @@
 
-//Test
+// Test
 
 module.exports = function(app){
     //returns user or create new one if not exists
