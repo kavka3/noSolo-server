@@ -1,7 +1,6 @@
 
 //Test
 
-
 module.exports = function(app){
     //returns user or create new one if not exists
     //TODO add user authentication and session management on sign in sign out and delete
